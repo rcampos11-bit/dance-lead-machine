@@ -27,10 +27,10 @@ function addLeadCard(lead) {
   const div = document.createElement("div");
   div.className = "lead-card";
   const apptLine = lead.appointment
-    ? `<tr><td class="k">Your Appointment</td><td>${escapeHtml(lead.appointment)} with ${escapeHtml(lead.assignedInstructor)}</td></tr>`
+    ? `<tr><td class="k">Requested Time</td><td>${escapeHtml(lead.appointment)} with ${escapeHtml(lead.assignedInstructor)} — <i>we'll confirm this with you shortly</i></td></tr>`
     : `<tr><td class="k">Next Step</td><td>${escapeHtml(lead.assignedInstructor)} will reach out to schedule with you.</td></tr>`;
   div.innerHTML = `
-    <h4>✅ You're all set, ${escapeHtml(lead.name)}!</h4>
+    <h4>✅ Thanks, ${escapeHtml(lead.name)}!</h4>
     <table>
       <tr><td class="k">Interest</td><td>${escapeHtml(lead.danceInterest)}</td></tr>
       ${apptLine}
