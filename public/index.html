@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dance Lead Machine™ — Live AI Receptionist</title>
+<title>Dance Lead Machine™ Studio — Chat with Us</title>
 <link rel="stylesheet" href="/styles.css">
+<style>
+  .layout-solo { max-width: 760px; margin: 32px auto; padding: 0 16px; }
+</style>
 </head>
 <body>
 <div class="app">
@@ -12,138 +15,25 @@
     <div class="brand">
       <div class="logo">DL</div>
       <div>
-        <h1>Dance Lead Machine™ — Live AI Receptionist</h1>
-        <p>Connected to a real Claude model and a real database — this is actually running, not a simulation.</p>
+        <h1>Dance Lead Machine™ Studio</h1>
+        <p>Ask us anything — wedding dances, private lessons, kids classes, and more.</p>
       </div>
     </div>
-    <div class="badge" id="liveBadge">CHECKING…</div>
   </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" id="tabBtnReceptionist">💬 AI Receptionist</button>
-    <button class="tab-btn" id="tabBtnFollowup">🔁 Automated Follow-Up <span class="count-pill" id="fuCount">0</span></button>
-    <button class="tab-btn" id="tabBtnTeam">🏢 Studio Team <span class="count-pill" id="teamCount">0</span></button>
-  </div>
-
-  <div id="view-receptionist">
-  <div class="layout">
+  <div class="layout-solo">
     <div class="card chat-card">
       <div class="chat-header">
         <div>
-          <h2><span class="status-dot"></span>AI Receptionist</h2>
-          <div class="sub">Type a real message — this is talking to a real Claude model</div>
+          <h2><span class="status-dot"></span>Chat with us</h2>
+          <div class="sub">We usually reply in seconds.</div>
         </div>
       </div>
-      <div class="quickstart" id="quickstart"></div>
       <div class="messages" id="messages"></div>
       <div class="composer">
         <input id="input" type="text" placeholder="Type a message, e.g. 'Hi, do you offer wedding dance lessons?'" autocomplete="off">
-        <button class="reset" id="resetBtn" title="Start a new conversation">New Lead</button>
+        <button class="reset" id="resetBtn" title="Start a new conversation">New Conversation</button>
         <button id="sendBtn">Send</button>
-      </div>
-    </div>
-
-    <div class="side">
-      <div class="card">
-        <h3>Captured Leads <span class="count-pill" id="leadCount">0</span></h3>
-        <p class="hint">Every finished conversation is saved to a real database — refresh the page and they're still here.</p>
-        <div class="lead-list" id="leadList">
-          <div class="empty">No leads captured yet — finish a conversation to see one appear here.</div>
-        </div>
-        <button class="export-all" id="exportAllBtn">⬇ Download All as CSV (for Leads tab)</button>
-      </div>
-
-      <div class="card">
-        <h3>How this works</h3>
-        <ul class="how-it-works">
-          <li><b>1. Understands</b> — a real Claude model reads the message and figures out what kind of dancer is inquiring.</li>
-          <li><b>2. Asks</b> — one smart follow-up question specific to that inquiry type, in natural language.</li>
-          <li><b>3. Collects</b> — name and best contact info.</li>
-          <li><b>4. Books</b> — offers real open slots and locks in an appointment, or notes a decline.</li>
-          <li><b>5. Distributes</b> — assigns the lead to the least-busy matching instructor on your Studio Team.</li>
-          <li><b>6. Saves</b> — writes a complete lead record to a real database, ready to export.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <div id="view-followup" class="view-hidden">
-    <div class="fu-layout">
-      <div class="side">
-        <div class="card">
-          <h3>Sequence Library</h3>
-          <p class="hint">These fire automatically based on what happens with a lead. Every message is personalized with the lead's name, product, and instructor.</p>
-          <div id="seqLibrary"></div>
-        </div>
-
-        <div class="card">
-          <h3>Simulate an Event</h3>
-          <p class="hint">The chat auto-triggers booking &amp; nurture sequences. Use this to simulate the events it can't reach on its own (no-show, trial completed, gone cold).</p>
-          <div class="sim-form">
-            <select id="simLeadSelect"></select>
-            <select id="simTriggerSelect">
-              <option value="missed_appointment">Missed their appointment (no-show)</option>
-              <option value="trial_no_purchase">Completed a trial — hasn't enrolled</option>
-              <option value="cold_nurture">Gone cold — hasn't responded in a while</option>
-              <option value="new_inquiry_no_response">New inquiry — no response yet</option>
-            </select>
-            <button id="simAddBtn">+ Add Follow-Up Sequence</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="side">
-        <div class="card">
-          <h3>Active Follow-Up Timelines</h3>
-          <p class="hint">Every scheduled touchpoint for every lead, generated automatically and saved to the database.</p>
-          <div id="timelineList"><div class="empty">No follow-up sequences yet — finish a chat or simulate an event to see one appear here.</div></div>
-        </div>
-
-        <div class="card">
-          <h3>All Scheduled Sends <span class="count-pill" id="sendCount">0</span></h3>
-          <p class="hint">Every message this system would send, in order — hand this to your texting/email tool to actually send it.</p>
-          <div class="fu-table-wrap">
-            <table class="fu-table" id="sendTable">
-              <thead><tr><th>Lead</th><th>Date</th><th>Channel</th><th>Status</th><th>Message</th></tr></thead>
-              <tbody id="sendTableBody"></tbody>
-            </table>
-          </div>
-          <button class="export-all" id="exportSendsBtn">⬇ Download All Scheduled Sends as CSV</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="view-team" class="view-hidden">
-    <div class="team-layout">
-      <div class="side">
-        <div class="card">
-          <h3>Add an Instructor</h3>
-          <p class="hint">Scale from one instructor to a full studio team. New leads are distributed automatically to the least-busy matching instructor.</p>
-          <div class="add-instructor-form">
-            <input type="text" id="newInstructorName" placeholder="Instructor name">
-            <div class="specialty-checks" id="specialtyChecks"></div>
-            <button id="addInstructorBtn">+ Add to Team</button>
-          </div>
-        </div>
-        <div class="card">
-          <h3>How lead distribution works</h3>
-          <ul class="how-it-works">
-            <li><b>Specialty match first</b> — a wedding inquiry goes to an instructor tagged Wedding, if one is active.</li>
-            <li><b>Least busy wins</b> — among matching instructors, the one with the fewest open leads gets the next one.</li>
-            <li><b>No specialist? No problem</b> — falls back to the least-busy active instructor studio-wide.</li>
-            <li><b>Toggle instructors off</b> — inactive instructors get skipped entirely, e.g. while they're out.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="side">
-        <div class="card">
-          <h3>Studio Team <span class="count-pill" id="teamRosterCount">0</span></h3>
-          <p class="hint">Live workload, pulled straight from the real database.</p>
-          <div id="rosterList"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -151,6 +41,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js"></script>
+<script src="/chat.js"></script>
 </body>
 </html>
