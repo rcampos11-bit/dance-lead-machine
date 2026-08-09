@@ -1,0 +1,16 @@
+{
+  "name": "dance-lead-machine-server",
+  "version": "1.0.0",
+  "description": "Dance Lead Machine - real connected AI Receptionist backend (zero external dependencies)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --env-file-if-exists=.env src/server.js",
+    "test": "node test/run_tests.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

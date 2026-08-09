@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dance Lead Machine™ — AI Receptionist</title>
+<style>
+  :root{
+    --navy:#1F2A44;
+    --navy-light:#3C4B6E;
+    --gold:#C9A227;
+    --hot:#E06666;
+    --warm:#F6B26B;
+    --cold:#9FC5E8;
+    --bg:#F5F6FA;
+    --card:#FFFFFF;
+    --border:#E2E5EC;
+    --text:#26304A;
+    --muted:#6B7284;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:24px 20px 60px;
+  }
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand .logo{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(135deg,var(--navy),var(--navy-light));
+    display:flex;align-items:center;justify-content:center;
+    color:var(--gold);font-size:22px;font-weight:bold;
+  }
+  .brand h1{
+    font-size:20px;margin:0;color:var(--navy);
+  }
+  .brand p{
+    margin:0;font-size:12px;color:var(--muted);
+  }
+  .badge{
+    background:var(--navy);
+    color:#fff;
+    font-size:11px;
+    font-weight:bold;
+    padding:5px 12px;
+    border-radius:999px;
+    letter-spacing:.03em;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns:1.5fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:880px){
+    .layout{grid-template-columns:1fr;}
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:0 1px 3px rgba(20,25,45,0.06);
+  }
+  .chat-card{
+    display:flex;
+    flex-direction:column;
+    height:640px;
+  }
+  .chat-header{
+    padding:16px 18px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .chat-header h2{
+    font-size:15px;margin:0;color:var(--navy);
+  }
+  .status-dot{
+    width:8px;height:8px;border-radius:50%;background:#4CAF50;
+    display:inline-block;margin-right:6px;
+  }
+  .chat-header .sub{font-size:12px;color:var(--muted);}
+  .quickstart{
+    padding:10px 18px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    background:#FAFBFD;
+  }
+  .qs-btn{
+    font-size:11.5px;
+    background:#fff;
+    border:1px solid var(--border);
+    color:var(--navy-light);
+    padding:6px 10px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .qs-btn:hover{
+    background:var(--navy);
+    color:#fff;
+    border-color:var(--navy);
+  }
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .msg{
+    max-width:78%;
+    padding:10px 14px;
+    border-radius:14px;
+    font-size:13.5px;
+    line-height:1.45;
+    white-space:pre-wrap;
+  }
+  .msg.bot{
+    align-self:flex-start;
+    background:#EEF1F8;
+    color:var(--text);
+    border-bottom-left-radius:4px;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:var(--navy);
+    color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg.system{
+    align-self:center;
+    background:transparent;
+    color:var(--muted);
+    font-size:11.5px;
+    font-style:italic;
+  }
+  .lead-card{
+    align-self:flex-start;
+    max-width:92%;
+    background:#FFF7DB;
+    border:1px solid #EBD98A;
+    border-radius:12px;
+    padding:14px;
+    font-size:12.5px;
+  }
+  .lead-card h4{
+    margin:0 0 8px;
+    color:var(--navy);
+    font-size:13px;
+  }
+  .lead-card table{border-collapse:collapse;width:100%;}
+  .lead-card td{padding:2px 4px;vertical-align:top;}
+  .lead-card td.k{color:var(--muted);white-space:nowrap;padding-right:8px;}
+  .composer{
+    border-top:1px solid var(--border);
+    padding:12px 14px;
+    display:flex;
+    gap:8px;
+  }
+  .composer input{
+    flex:1;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:11px 14px;
+    font-size:13.5px;
+    font-family:inherit;
+  }
+  .composer input:focus{outline:2px solid var(--navy-light);}
+  .composer button{
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:0 20px;
+    font-size:13.5px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  .composer button:hover{background:var(--navy-light);}
+  .composer .reset{
+    background:#fff;
+    color:var(--navy);
+    border:1px solid var(--border);
+  }
+  .composer .reset:hover{background:#F0F1F5;}
+
+  .side{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .side .card{padding:16px 18px;}
+  .side h3{
+    font-size:14px;margin:0 0 6px;color:var(--navy);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .side p.hint{font-size:11.5px;color:var(--muted);margin:0 0 12px;}
+  .count-pill{
+    background:var(--gold);color:#fff;font-size:11px;font-weight:bold;
+    padding:2px 9px;border-radius:999px;
+  }
+  .lead-list{
+    display:flex;flex-direction:column;gap:10px;
+    max-height:330px;overflow-y:auto;
+  }
+  .lead-row{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12px;
+  }
+  .lead-row .name{font-weight:bold;color:var(--navy);font-size:13px;}
+  .lead-row .tag{
+    display:inline-block;font-size:10px;font-weight:bold;color:#fff;
+    padding:2px 8px;border-radius:999px;margin-left:6px;
+  }
+  .lead-row .meta{color:var(--muted);margin-top:3px;}
+  .lead-row .actions{margin-top:8px;display:flex;gap:6px;}
+  .lead-row button{
+    font-size:10.5px;padding:5px 9px;border-radius:7px;border:1px solid var(--border);
+    background:#fff;cursor:pointer;color:var(--navy-light);
+  }
+  .lead-row button:hover{background:var(--navy);color:#fff;}
+  .empty{
+    font-size:12px;color:var(--muted);text-align:center;padding:20px 6px;
+  }
+  .export-all{
+    width:100%;
+    margin-top:12px;
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    padding:10px;
+    border-radius:9px;
+    font-size:12.5px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  .export-all:hover{background:var(--navy-light);}
+  .how-it-works li{margin-bottom:6px;font-size:12px;color:var(--text);}
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .25s;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">DL</div>
+      <div>
+        <h1>Dance Lead Machine™ — AI Receptionist</h1>
+        <p>Prototype: answers inquiries, qualifies leads, and builds your CRM record automatically</p>
+      </div>
+    </div>
+    <div class="badge">v1 PROTOTYPE</div>
+  </header>
+
+  <div class="layout">
+    <div class="card chat-card">
+      <div class="chat-header">
+        <div>
+          <h2><span class="status-dot"></span>AI Receptionist</h2>
+          <div class="sub">Type like a real prospect — try a message below or use a quick example</div>
+        </div>
+      </div>
+      <div class="quickstart" id="quickstart"></div>
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <input id="input" type="text" placeholder="Type a message, e.g. 'Hi, do you offer wedding dance lessons?'" autocomplete="off">
+        <button class="reset" id="resetBtn" title="Start a new conversation">New Lead</button>
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Captured Leads <span class="count-pill" id="leadCount">0</span></h3>
+        <p class="hint">Every finished conversation becomes a lead record, formatted to match your Leads tab.</p>
+        <div class="lead-list" id="leadList">
+          <div class="empty">No leads captured yet — finish a conversation to see one appear here.</div>
+        </div>
+        <button class="export-all" id="exportAllBtn">⬇ Download All as CSV (for Leads tab)</button>
+      </div>
+
+      <div class="card">
+        <h3>How this works</h3>
+        <ul class="how-it-works">
+          <li><b>1. Listens</b> — figures out what kind of dancer is inquiring (wedding, beginner, private, group, competitive, kids, social, workshop).</li>
+          <li><b>2. Asks</b> — one smart follow-up question specific to that inquiry type.</li>
+          <li><b>3. Collects</b> — name and best contact info.</li>
+          <li><b>4. Hands off</b> — builds a complete lead record with recommended product and estimated revenue, ready to drop into your CRM.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DANCE LEAD MACHINE — AI RECEPTIONIST (rule-based prototype)
+   ============================================================ */
+
+const CATEGORIES = {
+  wedding: {
+    label: "Wedding Dance",
+    product: "Wedding Package (Private Lessons)",
+    revenue: 900,
+    triggers: ["wedding","fiance","fiancé","fiancee","bride","groom","first dance","getting married","engaged"],
+    followup: "How exciting — congratulations! When's the big day, and have the two of you danced together before?"
+  },
+  competitive: {
+    label: "Competitive / Team",
+    product: "Competitive Team Program",
+    revenue: 1400,
+    triggers: ["compete","competition","competitive","team tryout","adjudicate","dancesport"],
+    followup: "Love that. How much dance experience do you already have, and what level are you aiming for?"
+  },
+  kids: {
+    label: "Kids Program",
+    product: "Kids Beginner Program",
+    revenue: 300,
+    triggers: ["my son","my daughter","my kid","for my child","kids class","child dance"],
+    followup: "Great! How old is your dancer, and have they taken any classes before?"
+  },
+  private: {
+    label: "Private Lessons",
+    product: "Private Lesson Package",
+    revenue: 750,
+    triggers: ["private lesson","private lessons","one on one","one-on-one","1-on-1","private class","privates"],
+    followup: "Happy to help. Is there a particular style you'd like to focus on, and what days/times usually work best for you?"
+  },
+  group: {
+    label: "Group Class",
+    product: "Group Class Series",
+    revenue: 240,
+    triggers: ["group class","group lesson","group classes","class schedule","class times"],
+    followup: "Great choice — which style are you most interested in, and do you prefer weekday evenings or weekends?"
+  },
+  social: {
+    label: "Social Dancing",
+    product: "Social/Practice Party Pass",
+    revenue: 120,
+    triggers: ["social dance","social dancing","practice party","just want to dance socially","dance social"],
+    followup: "Sounds fun! Is there a style of social dancing you already enjoy, or are you open to trying a few?"
+  },
+  workshop: {
+    label: "Workshop / Event",
+    product: "Workshop Ticket",
+    revenue: 150,
+    triggers: ["workshop","seminar","special event","upcoming event"],
+    followup: "Great — which workshop or event caught your eye, or would you like me to point you to what's coming up?"
+  },
+  beginner: {
+    label: "Beginner / Never Danced",
+    product: "Beginner Program",
+    revenue: 320,
+    triggers: ["never danced","beginner","new to dance","don't know how to dance","always wanted to learn","no experience","first time dancing"],
+    followup: "That's wonderful — everyone starts somewhere! Is there a style you've always been curious about, or should I just recommend our most popular beginner option?"
+  }
+};
+
+const CATEGORY_ORDER = ["wedding","competitive","kids","private","group","social","workshop","beginner"];
+
+const QUICKSTARTS = [
+  {label:"Wedding lead", text:"My fiancé and I need help with our first dance for our wedding in October."},
+  {label:"Beginner lead", text:"I've never danced before. Do you have beginner classes?"},
+  {label:"Private lessons", text:"I'm looking for private lessons, ideally once a week."},
+  {label:"Competitive team", text:"I used to compete years ago and want to get back into it and join a team."},
+  {label:"Kids class", text:"Hi! Do you have classes for my daughter, she's 7?"},
+  {label:"Unclear inquiry", text:"Hi, I saw your QR code at the coffee shop and got curious about dance lessons."}
+];
+
+function classify(text){
+  const t = text.toLowerCase();
+  for (const key of CATEGORY_ORDER){
+    const cat = CATEGORIES[key];
+    if (cat.triggers.some(trigger => t.includes(trigger))) return key;
+  }
+  return null;
+}
+
+function detectEnergy(text){
+  const t = text.toLowerCase();
+  const hot = ["asap","excited","can't wait","cant wait","soon as possible","this week","!"];
+  return hot.some(w => t.includes(w)) ? 5 : 4;
+}
+
+function extractContact(text){
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const phoneMatch = text.match(/(\+?\d[\d\-\.\s\(\)]{7,}\d)/);
+  return { email: emailMatch ? emailMatch[0] : "", phone: phoneMatch ? phoneMatch[0].trim() : "" };
+}
+
+function todayStr(offsetDays=0){
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear();
+}
+
+// ---- Conversation state ----
+let convo = null; // {step, categoryKey, initialMsg, followupAnswer, name, contact, clarifyAttempts}
+let leads = [];
+let leadIdCounter = 1;
+
+function newConversation(){
+  convo = { step: "AWAIT_INTEREST", categoryKey: null, initialMsg: "", followupAnswer: "", name: "", contact: "", clarifyAttempts: 0 };
+  const messagesEl = document.getElementById("messages");
+  messagesEl.innerHTML = "";
+  botSay("Hi there! 👋 Thanks for reaching out to Dance Lead Machine™ Studio. I'm here to help — what brings you in today?");
+}
+
+function botSay(text){
+  addMessage(text, "bot");
+}
+function userSay(text){
+  addMessage(text, "user");
+}
+function systemNote(text){
+  addMessage(text, "system");
+}
+
+function addMessage(text, cls){
+  const messagesEl = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addLeadCard(lead){
+  const messagesEl = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "lead-card";
+  div.innerHTML = `
+    <h4>✅ Lead captured — handed off to the studio</h4>
+    <table>
+      <tr><td class="k">Name</td><td>${escapeHtml(lead.name)}</td></tr>
+      <tr><td class="k">Contact</td><td>${escapeHtml(lead.phone || lead.email || "—")}</td></tr>
+      <tr><td class="k">Interest</td><td>${escapeHtml(lead.danceInterest)}</td></tr>
+      <tr><td class="k">Recommended</td><td>${escapeHtml(lead.recommendedProduct)}</td></tr>
+      <tr><td class="k">Potential Revenue</td><td>$${lead.potentialRevenue.toLocaleString()}</td></tr>
+    </table>`;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function handleUserMessage(text){
+  if (!text.trim()) return;
+  userSay(text);
+
+  if (convo.step === "AWAIT_INTEREST"){
+    const key = classify(text);
+    convo.initialMsg = text;
+    if (key){
+      convo.categoryKey = key;
+      const cat = CATEGORIES[key];
+      setTimeout(() => botSay(cat.followup), 350);
+      convo.step = "AWAIT_FOLLOWUP";
+    } else {
+      convo.clarifyAttempts++;
+      if (convo.clarifyAttempts >= 2){
+        // default to beginner path after two unclear attempts — skip the followup, go straight to name
+        convo.categoryKey = "beginner";
+        convo.followupAnswer = "(no specific preference given)";
+        setTimeout(() => botSay("No worries — we'll get you started with our most popular beginner option and a real person can fine-tune it from there. What's your name?"), 350);
+        convo.step = "AWAIT_NAME";
+      } else {
+        setTimeout(() => botSay("Got it! Just so I point you the right direction — are you thinking wedding prep, private lessons, group classes, competitive/team, a class for your kids, social dancing, a workshop, or just curious to try dance for the first time?"), 350);
+      }
+    }
+    return;
+  }
+
+  if (convo.step === "AWAIT_FOLLOWUP"){
+    convo.followupAnswer = text;
+    setTimeout(() => botSay("Perfect, thank you! What's your name?"), 350);
+    convo.step = "AWAIT_NAME";
+    return;
+  }
+
+  if (convo.step === "AWAIT_NAME"){
+    convo.name = text.trim();
+    setTimeout(() => botSay(`Nice to meet you, ${firstName(convo.name)}! What's the best phone number or email to reach you at?`), 350);
+    convo.step = "AWAIT_CONTACT";
+    return;
+  }
+
+  if (convo.step === "AWAIT_CONTACT"){
+    const { email, phone } = extractContact(text);
+    convo.contact = { email, phone: phone || (!email ? text.trim() : "") };
+    finalizeLead();
+    return;
+  }
+}
+
+function firstName(full){
+  return full.split(" ")[0] || full;
+}
+
+function finalizeLead(){
+  const cat = CATEGORIES[convo.categoryKey];
+  const engagement = detectEnergy(convo.initialMsg + " " + convo.followupAnswer);
+  const lead = {
+    id: leadIdCounter++,
+    dateAdded: todayStr(0),
+    name: convo.name,
+    phone: convo.contact.phone,
+    email: convo.contact.email,
+    danceInterest: cat.label,
+    goalNotes: (convo.initialMsg + " — " + convo.followupAnswer).slice(0, 220),
+    leadSource: "AI Receptionist (Website Chat)",
+    pipelineStage: "New Inquiry",
+    lastContact: todayStr(0),
+    nextFollowUp: todayStr(1),
+    assignedInstructor: "Unassigned",
+    recommendedProduct: cat.product,
+    potentialRevenue: cat.revenue,
+    engagement: engagement
+  };
+  leads.push(lead);
+
+  setTimeout(() => {
+    botSay(`Thanks, ${firstName(convo.name)}! I've got everything I need. One of our instructors will reach out shortly to get you booked in. 🎉`);
+    addLeadCard(lead);
+    renderLeadList();
+    convo.step = "DONE";
+  }, 350);
+}
+
+// ---- Sidebar rendering ----
+function renderLeadList(){
+  document.getElementById("leadCount").textContent = leads.length;
+  const listEl = document.getElementById("leadList");
+  if (leads.length === 0){
+    listEl.innerHTML = '<div class="empty">No leads captured yet — finish a conversation to see one appear here.</div>';
+    return;
+  }
+  listEl.innerHTML = "";
+  leads.slice().reverse().forEach(lead => {
+    const row = document.createElement("div");
+    row.className = "lead-row";
+    const tagColor = lead.engagement >= 5 ? "var(--hot)" : "var(--warm)";
+    row.innerHTML = `
+      <div><span class="name">${escapeHtml(lead.name || "(no name)")}</span>
+        <span class="tag" style="background:${tagColor}">${escapeHtml(lead.danceInterest)}</span>
+      </div>
+      <div class="meta">${escapeHtml(lead.recommendedProduct)} · $${lead.potentialRevenue.toLocaleString()} · Engagement ${lead.engagement}/5</div>
+      <div class="actions">
+        <button data-id="${lead.id}" class="copyBtn">Copy CRM Row</button>
+      </div>`;
+    listEl.appendChild(row);
+  });
+  document.querySelectorAll(".copyBtn").forEach(btn => {
+    btn.addEventListener("click", () => copyLeadRow(parseInt(btn.dataset.id)));
+  });
+}
+
+function leadToRow(lead){
+  // Matches Leads tab columns B–O (Date Added ... Engagement)
+  return [
+    lead.dateAdded, lead.name, lead.phone, lead.email, lead.danceInterest,
+    lead.goalNotes, lead.leadSource, lead.pipelineStage, lead.lastContact,
+    lead.nextFollowUp, lead.assignedInstructor, lead.recommendedProduct,
+    lead.potentialRevenue, lead.engagement
+  ];
+}
+
+function copyLeadRow(id){
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  const row = leadToRow(lead).join("\t");
+  navigator.clipboard.writeText(row).then(() => {
+    showToast("Copied! Paste into column B of a blank row on the Leads tab.");
+  }).catch(() => {
+    showToast("Couldn't copy automatically — select and copy manually.");
+  });
+}
+
+function exportAllCsv(){
+  if (leads.length === 0){
+    showToast("No leads captured yet.");
+    return;
+  }
+  const headers = ["Date Added","Name","Phone","Email","Dance Interest","Goal / Notes","Lead Source","Pipeline Stage","Last Contact","Next Follow-Up","Assigned Instructor","Recommended Product","Potential Revenue ($)","Engagement (1-5)"];
+  const rows = leads.map(leadToRow);
+  const csv = [headers, ...rows].map(r => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ai_receptionist_leads.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("CSV downloaded — paste starting in column B of your Leads tab.");
+}
+
+function csvEscape(val){
+  const s = String(val ?? "");
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function showToast(text){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+// ---- Wiring ----
+document.getElementById("sendBtn").addEventListener("click", () => {
+  const input = document.getElementById("input");
+  const text = input.value;
+  input.value = "";
+  if (convo.step === "DONE"){
+    newConversation();
+    setTimeout(() => handleUserMessage(text), 500);
+  } else {
+    handleUserMessage(text);
+  }
+});
+document.getElementById("input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("sendBtn").click();
+});
+document.getElementById("resetBtn").addEventListener("click", newConversation);
+document.getElementById("exportAllBtn").addEventListener("click", exportAllCsv);
+
+const qsEl = document.getElementById("quickstart");
+QUICKSTARTS.forEach(q => {
+  const btn = document.createElement("button");
+  btn.className = "qs-btn";
+  btn.textContent = q.label;
+  btn.addEventListener("click", () => {
+    document.getElementById("input").value = q.text;
+    document.getElementById("sendBtn").click();
+  });
+  qsEl.appendChild(btn);
+});
+
+newConversation();
+renderLeadList();
+</script>
+</body>
+</html>
