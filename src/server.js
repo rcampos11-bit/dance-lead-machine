@@ -5,6 +5,7 @@
 const http = require("node:http");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { URL } = require("node:url");
 
 const { Router, sendJson, sendText, serveStatic } = require("./router");
 const { openDb } = require("./db");
@@ -20,9 +21,33 @@ const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+
 const db = openDb();
 const router = new Router();
 const staticHandler = serveStatic(PUBLIC_DIR);
+
+// ---- admin auth helpers ----
+function isAdminPath(pathname) {
+  if (pathname === "/admin.html") return true;
+  const adminApiPrefixes = ["/api/leads", "/api/sequences", "/api/instructors"];
+  return adminApiPrefixes.some(
+    (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + ".")
+  );
+}
+
+function checkAdminAuth(req) {
+  if (!ADMIN_PASSWORD) return false;
+  const header = req.headers["authorization"] || "";
+  if (!header.startsWith("Basic ")) return false;
+  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+  const idx = decoded.indexOf(":");
+  if (idx === -1) return false;
+  const user = decoded.slice(0, idx);
+  const pass = decoded.slice(idx + 1);
+  return user === ADMIN_USER && pass === ADMIN_PASSWORD;
+}
 
 // ---- helpers ----
 function extractContact(text) {
@@ -55,7 +80,6 @@ function getLoadByInstructor() {
 }
 
 function toAnthropicHistory(storedMessages) {
-  // storedMessages already in {role, content} shape ready for the API
   return storedMessages;
 }
 
@@ -84,7 +108,6 @@ router.post("/api/chat", async ({ req, res, body }) => {
   } else {
     state = JSON.parse(convo.state);
     messages = JSON.parse(convo.messages);
-    // Dates don't survive JSON round-trips as Date objects — restore them.
     state.slots = (state.slots || []).map((s) => ({ ...s, dateObj: new Date(s.dateObj) }));
   }
 
@@ -164,7 +187,6 @@ router.post("/api/chat", async ({ req, res, body }) => {
     );
     const leadId = info.lastInsertRowid;
 
-    // Generate the follow-up sequence
     const templateKey = booked ? "appointment_reminder" : "new_inquiry_no_response";
     const steps = generateSequenceSteps(leadRow, templateKey, slot ? slot.dateObj : null);
     const insertSeq = db.prepare(
@@ -362,6 +384,19 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  const pathname = decodeURIComponent(url.pathname);
+
+  if (isAdminPath(pathname)) {
+    if (!checkAdminAuth(req)) {
+      res.writeHead(401, {
+        "content-type": "text/plain; charset=utf-8",
+        "www-authenticate": 'Basic realm="Studio Admin"',
+      });
+      return res.end("Authentication required");
+    }
+  }
+
   const handled = await router.handle(req, res);
   if (handled) return;
 
@@ -376,6 +411,9 @@ if (require.main === module) {
     console.log(`Dance Lead Machine server listening on http://localhost:${PORT}`);
     if (!process.env.ANTHROPIC_API_KEY) {
       console.warn("WARNING: ANTHROPIC_API_KEY is not set. /api/chat will fail until it is.");
+    }
+    if (!process.env.ADMIN_PASSWORD) {
+      console.warn("WARNING: ADMIN_PASSWORD is not set. /admin.html will be locked out entirely until it is.");
     }
   });
 }
