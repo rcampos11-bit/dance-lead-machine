@@ -185,6 +185,31 @@ function generateSequenceSteps(lead, templateKey, apptDateObj, now = new Date())
     })
     .sort((a, b) => a.date - b.date);
 }
+// ============================================================
+// Real Setmore mapping — connects our internal categories and
+// instructor names to actual Setmore service/staff keys.
+// ============================================================
+const SETMORE_STAFF_KEYS = {
+  robert: "3b780ad4-6575-4be4-86b4-324d21d630cf",
+  brigette: "Arx1i3lbnHMAUIHI5D8ZqHd5bdppSqqD",
+};
+
+function getSetmoreStaffKey(instructorName) {
+  const n = (instructorName || "").toLowerCase();
+  if (n.includes("robert")) return SETMORE_STAFF_KEYS.robert;
+  if (n.includes("brigette")) return SETMORE_STAFF_KEYS.brigette;
+  return null;
+}
+
+const SETMORE_SERVICE_BY_CATEGORY = {
+  wedding: { key: "0001700c-7755-4346-bd80-1513d7551de5", durationMin: 30 },
+  beginner: { key: "cedde991-a0da-4729-941a-7cc1c26d89b0", durationMin: 45 },
+  private: { key: "cedde991-a0da-4729-941a-7cc1c26d89b0", durationMin: 45 },
+};
+
+function getSetmoreService(categoryKey) {
+  return SETMORE_SERVICE_BY_CATEGORY[categoryKey] || null;
+}
 
 module.exports = {
   CATEGORIES,
@@ -195,4 +220,6 @@ module.exports = {
   generateSequenceSteps,
   firstNameOf,
   fmtDate,
+  getSetmoreStaffKey,
+  getSetmoreService,
 };
