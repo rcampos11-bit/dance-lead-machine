@@ -31,7 +31,7 @@ const staticHandler = serveStatic(PUBLIC_DIR);
 // ---- admin auth helpers ----
 function isAdminPath(pathname) {
   if (pathname === "/admin.html") return true;
-  const adminApiPrefixes = ["/api/leads", "/api/sequences", "/api/instructors"];
+  const adminApiPrefixes = ["/api/leads", "/api/sequences", "/api/instructors", "/api/setmore"];
   return adminApiPrefixes.some(
     (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + ".")
   );
@@ -357,6 +357,23 @@ router.patch("/api/instructors/:id", async ({ res, params, body }) => {
 router.delete("/api/instructors/:id", async ({ res, params }) => {
   db.prepare("DELETE FROM instructors WHERE id = ?").run(params.id);
   sendJson(res, 200, { ok: true });
+});
+
+// ============================================================
+// Setmore diagnostic — one-time use to discover staff/service keys
+// ============================================================
+router.get("/api/setmore/diagnostic", async ({ res }) => {
+  try {
+    const setmore = require("./setmore");
+    const refreshToken = process.env.SETMORE_REFRESH_TOKEN;
+    const [staff, services] = await Promise.all([
+      setmore.listStaff(refreshToken),
+      setmore.listServices(refreshToken),
+    ]);
+    sendJson(res, 200, { staff, services });
+  } catch (err) {
+    sendJson(res, 500, { error: err.message });
+  }
 });
 
 // ============================================================
