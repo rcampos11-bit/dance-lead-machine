@@ -66,6 +66,14 @@ function to24Hour(timeStr) {
   if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
   return `${String(hour).padStart(2, "0")}:${minute}`;
 }
+function addMinutes(dateTimeStr, minutes) {
+  const [datePart, timePart] = dateTimeStr.split("T");
+  const [h, m] = timePart.split(":").map(Number);
+  const totalMinutes = h * 60 + m + minutes;
+  const newH = Math.floor(totalMinutes / 60) % 24;
+  const newM = totalMinutes % 60;
+  return `${datePart}T${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+}
 function getRoster() {
   const rows = db.prepare("SELECT * FROM instructors").all();
   return rows.map((r) => ({
@@ -255,7 +263,7 @@ state.done = true;
             serviceKey: service.key,
             customerKey,
             startTime,
-            endTime: startTime,
+            endTime: addMinutes(startTime, 45),
           });
           if (appt) {
             realBookingLabel = `${chosenSlot.dateStr} at ${chosenSlot.time}`;
