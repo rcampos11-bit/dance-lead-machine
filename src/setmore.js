@@ -66,7 +66,7 @@ async function getAvailableSlots({ refreshToken, staffKey, serviceKey, selectedD
     fetchImpl
   );
   return data?.data?.slots || [];
-}
+
 }
 
 async function findOrCreateCustomer({ refreshToken, name, email, phone }, fetchImpl = fetch) {
