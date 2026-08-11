@@ -229,7 +229,10 @@ state.done = true;
             staffKey,
             serviceKey: service.key,
             selectedDate: dateStr,
-          }).catch(() => []);
+          .catch((err) => {
+            console.error(`Setmore slots lookup failed for ${dateStr}:`, err.message);
+            return [];
+          });
           if (slots && slots.length > 0) {
             chosenSlot = { dateStr, time: slots[0] };
           }
