@@ -200,8 +200,60 @@ router.post("/api/chat", async ({ req, res, body }) => {
       insertStep.run(seqInfo.lastInsertRowid, s.dateStr, s.sortKey, s.channel, s.body, s.status);
     }
 
-    state.done = true;
+state.done = true;
     state.leadId = leadId;
+
+    let realBookingLabel = null;
+    try {
+      const { getSetmoreStaffKey, getSetmoreService } = require("./logic");
+      const staffKey = getSetmoreStaffKey(instructor);
+      const service = getSetmoreService(tc.category);
+      const refreshToken = process.env.SETMORE_REFRESH_TOKEN;
+
+      if (booked && staffKey && service && refreshToken) {
+        const setmore = require("./setmore");
+        const customerKey = await setmore.findOrCreateCustomer({
+          refreshToken,
+          name: tc.name,
+          email,
+          phone,
+        });
+
+        let chosenSlot = null;
+        for (let dayOffset = 0; dayOffset < 7 && !chosenSlot; dayOffset++) {
+          const d = new Date();
+          d.setDate(d.getDate() + dayOffset);
+          const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+          const slots = await setmore.getAvailableSlots({
+            refreshToken,
+            staffKey,
+            serviceKey: service.key,
+            selectedDate: dateStr,
+          }).catch(() => []);
+          if (slots && slots.length > 0) {
+            chosenSlot = { dateStr, time: slots[0] };
+          }
+        }
+
+        if (chosenSlot) {
+          const startTime = `${chosenSlot.dateStr.split("/").reverse().join("-")}T${chosenSlot.time}`;
+          const appt = await setmore.bookAppointment({
+            refreshToken,
+            staffKey,
+            serviceKey: service.key,
+            customerKey,
+            startTime,
+            endTime: startTime,
+          });
+          if (appt) {
+            realBookingLabel = `${chosenSlot.dateStr} at ${chosenSlot.time}`;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Setmore booking attempt failed, falling back to placeholder time:", err.message);
+    }
+
     leadSummary = {
       id: leadId,
       name: tc.name,
@@ -210,8 +262,9 @@ router.post("/api/chat", async ({ req, res, body }) => {
       potentialRevenue: cat.revenue,
       assignedInstructor: instructor,
       pipelineStage: booked ? "Appointment Booked" : "Qualified",
-      appointment: booked ? slot.label : null,
-    };
+      appointment: realBookingLabel || (booked ? slot.label : null),
+      realBooking: !!realBookingLabel,
+    };    
   }
 
   db.prepare("UPDATE conversations SET state = ?, messages = ?, updated_at = datetime('now') WHERE session_id = ?").run(
