@@ -73,7 +73,7 @@ async function findOrCreateCustomer({ refreshToken, name, email, phone }, fetchI
     if (found?.key) return found.key;
   }
   const created = await setmorePost(
-    "/customer/add",
+    "/customer/create",
     { first_name: name || "Website Lead", email: email || undefined, cell_phone: phone || undefined },
     token,
     fetchImpl
@@ -86,7 +86,7 @@ async function findOrCreateCustomer({ refreshToken, name, email, phone }, fetchI
 async function bookAppointment({ refreshToken, staffKey, serviceKey, customerKey, startTime, endTime }, fetchImpl = fetch) {
   const token = await getAccessToken(refreshToken, fetchImpl);
   const data = await setmorePost(
-    "/appointments/create",
+    "/appointment/create",
     { staff_key: staffKey, service_key: serviceKey, customer_key: customerKey, start_time: startTime, end_time: endTime },
     token,
     fetchImpl
