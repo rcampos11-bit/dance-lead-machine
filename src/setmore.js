@@ -59,9 +59,14 @@ async function listServices(refreshToken, fetchImpl = fetch) {
 
 async function getAvailableSlots({ refreshToken, staffKey, serviceKey, selectedDate }, fetchImpl = fetch) {
   const token = await getAccessToken(refreshToken, fetchImpl);
-  const q = new URLSearchParams({ staff_key: staffKey, service_key: serviceKey, selected_date: selectedDate });
-  const data = await setmoreGet(`/slots?${q.toString()}`, token, fetchImpl);
+  const data = await setmorePost(
+    "/slots",
+    { staff_key: staffKey, service_key: serviceKey, selected_date: selectedDate },
+    token,
+    fetchImpl
+  );
   return data?.data?.slots || [];
+}
 }
 
 async function findOrCreateCustomer({ refreshToken, name, email, phone }, fetchImpl = fetch) {
