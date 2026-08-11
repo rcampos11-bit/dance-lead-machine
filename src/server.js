@@ -57,7 +57,15 @@ function extractContact(text) {
   if (phoneMatch) return { email: "", phone: phoneMatch[0].trim() };
   return { email: "", phone: text.trim() };
 }
-
+function to24Hour(timeStr) {
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return timeStr;
+  let [, hour, minute, period] = match;
+  hour = parseInt(hour, 10);
+  if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
+  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+}
 function getRoster() {
   const rows = db.prepare("SELECT * FROM instructors").all();
   return rows.map((r) => ({
@@ -240,7 +248,7 @@ state.done = true;
 
         if (chosenSlot) {
           console.log("DEBUG chosenSlot:", JSON.stringify(chosenSlot));
-          const startTime = `${chosenSlot.dateStr.split("/").reverse().join("-")}T${chosenSlot.time}`;
+          const startTime = `${chosenSlot.dateStr.split("/").reverse().join("-")}T${to24Hour(chosenSlot.time}`;
           const appt = await setmore.bookAppointment({
             refreshToken,
             staffKey,
