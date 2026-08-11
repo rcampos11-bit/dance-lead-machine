@@ -239,6 +239,7 @@ state.done = true;
         }
 
         if (chosenSlot) {
+          console.log("DEBUG chosenSlot:", JSON.stringify(chosenSlot));
           const startTime = `${chosenSlot.dateStr.split("/").reverse().join("-")}T${chosenSlot.time}`;
           const appt = await setmore.bookAppointment({
             refreshToken,
