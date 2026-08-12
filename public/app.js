@@ -55,9 +55,10 @@ function addLeadCard(lead) {
   const el = document.getElementById("messages");
   const div = document.createElement("div");
   div.className = "lead-card";
-  const stageRow = lead.appointment
-    ? `<tr><td class="k">Appointment</td><td>${escapeHtml(lead.appointment)} with ${escapeHtml(lead.assignedInstructor)}</td></tr>`
-    : `<tr><td class="k">Status</td><td>Qualified — ${escapeHtml(lead.assignedInstructor)} to schedule personally</td></tr>`;
+  const stageRow = `<tr><td class="k">Status</td><td>Qualified — ${escapeHtml(lead.assignedInstructor)} to schedule personally</td></tr>`;
+const prefRow = lead.timePreference
+  ? `<tr><td class="k">Best Time</td><td>${escapeHtml(lead.timePreference.charAt(0).toUpperCase() + lead.timePreference.slice(1))}</td></tr>`
+  : `<tr><td class="k">Best Time</td><td>No preference given</td></tr>`;
   div.innerHTML = `
     <h4>✅ Lead captured — saved to the database</h4>
     <table>
@@ -66,6 +67,7 @@ function addLeadCard(lead) {
       <tr><td class="k">Recommended</td><td>${escapeHtml(lead.recommendedProduct)}</td></tr>
       <tr><td class="k">Potential Revenue</td><td>$${Number(lead.potentialRevenue).toLocaleString()}</td></tr>
       ${stageRow}
+${prefRow}
     </table>`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
