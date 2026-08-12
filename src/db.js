@@ -40,7 +40,8 @@ function openDb() {
       potential_revenue REAL DEFAULT 0,
       engagement INTEGER DEFAULT 3,
       appointment_label TEXT,
-      appointment_date TEXT
+      appointment_date TEXT,
+      time_preference TEXT
     );
 
     CREATE TABLE IF NOT EXISTS sequences (
@@ -69,6 +70,11 @@ function openDb() {
     );
   `);
 
+  // Migration: add time_preference to existing databases that predate this column
+  const cols = db.prepare("PRAGMA table_info(leads)").all();
+  if (!cols.some((c) => c.name === "time_preference")) {
+    db.exec("ALTER TABLE leads ADD COLUMN time_preference TEXT");
+  }
   // Seed default instructors on first run
   const count = db.prepare("SELECT COUNT(*) AS n FROM instructors").get().n;
   if (count === 0) {
