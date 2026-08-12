@@ -158,8 +158,7 @@ router.post("/api/chat", async ({ req, res, body }) => {
     const { email, phone } = extractContact(tc.contact || "");
     const cat = CATEGORIES[tc.category] || CATEGORIES.beginner;
 
-    const slot = tc.slot_choice ? state.slots.find((s) => s.id === tc.slot_choice) : null;
-    const booked = !!slot;
+    const timePreference = tc.time_preference || null;
 
     const roster = getRoster();
     const load = getLoadByInstructor();
@@ -169,13 +168,13 @@ router.post("/api/chat", async ({ req, res, body }) => {
       name: tc.name,
       recommendedProduct: cat.product,
       assignedInstructor: instructor,
-      appointment: booked ? slot.label : null,
+      appointment: null,
     };
 
     let notes = tc.notes || "";
-    notes += booked
-      ? ` | Appointment booked: ${slot.label} with ${instructor}.`
-      : ` | Requested a different time — needs a personal follow-up to schedule.`;
+    notes += timePreference
+      ? ` | Prefers ${timePreference} for a callback.`
+      : ` | No time-of-day preference given — needs a personal follow-up to schedule.`;
 
     const insertLead = db.prepare(`
       INSERT INTO leads (
@@ -192,19 +191,19 @@ router.post("/api/chat", async ({ req, res, body }) => {
       cat.label,
       notes,
       "AI Receptionist (Website Chat)",
-      booked ? "Appointment Booked" : "Qualified",
-      booked ? slot.dateStr : null,
+      "Qualified",
+      null,
       instructor,
       cat.product,
       cat.revenue,
       4,
-      booked ? slot.label : null,
-      booked ? slot.dateObj.toISOString() : null
+      null,
+      null
     );
     const leadId = info.lastInsertRowid;
 
-    const templateKey = booked ? "appointment_reminder" : "new_inquiry_no_response";
-    const steps = generateSequenceSteps(leadRow, templateKey, slot ? slot.dateObj : null);
+    const templateKey = "new_inquiry_no_response";
+    const steps = generateSequenceSteps(leadRow, templateKey, null);
     const insertSeq = db.prepare(
       "INSERT INTO sequences (lead_id, template_key, template_label) VALUES (?, ?, ?)"
     );
@@ -216,10 +215,8 @@ router.post("/api/chat", async ({ req, res, body }) => {
       insertStep.run(seqInfo.lastInsertRowid, s.dateStr, s.sortKey, s.channel, s.body, s.status);
     }
 
-state.done = true;
+    state.done = true;
     state.leadId = leadId;
-
-    let realBookingLabel = null;
 
     leadSummary = {
       id: leadId,
@@ -228,10 +225,9 @@ state.done = true;
       recommendedProduct: cat.product,
       potentialRevenue: cat.revenue,
       assignedInstructor: instructor,
-      pipelineStage: booked ? "Appointment Booked" : "Qualified",
-      appointment: realBookingLabel || (booked ? slot.label : null),
-      realBooking: !!realBookingLabel,
-    };    
+      pipelineStage: "Qualified",
+      timePreference,
+    };
   }
 
   db.prepare("UPDATE conversations SET state = ?, messages = ?, updated_at = datetime('now') WHERE session_id = ?").run(
