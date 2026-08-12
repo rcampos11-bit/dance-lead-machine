@@ -177,12 +177,12 @@ router.post("/api/chat", async ({ req, res, body }) => {
       : ` | No time-of-day preference given — needs a personal follow-up to schedule.`;
 
     const insertLead = db.prepare(`
-      INSERT INTO leads (
-        session_id, name, phone, email, dance_interest, goal_notes, lead_source,
-        pipeline_stage, next_follow_up, assigned_instructor, recommended_product,
-        potential_revenue, engagement, appointment_label, appointment_date
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `);
+  INSERT INTO leads (
+    session_id, name, phone, email, dance_interest, goal_notes, lead_source,
+    pipeline_stage, next_follow_up, assigned_instructor, recommended_product,
+    potential_revenue, engagement, appointment_label, appointment_date, time_preference
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+`);
     const info = insertLead.run(
       sessionId,
       tc.name,
@@ -198,7 +198,8 @@ router.post("/api/chat", async ({ req, res, body }) => {
       cat.revenue,
       4,
       null,
-      null
+      null,
+      timePreference
     );
     const leadId = info.lastInsertRowid;
 
