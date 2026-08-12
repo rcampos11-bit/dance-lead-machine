@@ -220,59 +220,6 @@ state.done = true;
     state.leadId = leadId;
 
     let realBookingLabel = null;
-    try {
-      const { getSetmoreStaffKey, getSetmoreService } = require("./logic");
-      const staffKey = getSetmoreStaffKey(instructor);
-      const service = getSetmoreService(tc.category);
-      const refreshToken = process.env.SETMORE_REFRESH_TOKEN;
-
-      if (booked && staffKey && service && refreshToken) {
-        const setmore = require("./setmore");
-        const customerKey = await setmore.findOrCreateCustomer({
-          refreshToken,
-          name: tc.name,
-          email,
-          phone,
-        });
-
-        let chosenSlot = null;
-        for (let dayOffset = 0; dayOffset < 7 && !chosenSlot; dayOffset++) {
-          const d = new Date();
-          d.setDate(d.getDate() + dayOffset);
-          const dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-          const slots = await setmore.getAvailableSlots({
-            refreshToken,
-            staffKey,
-            serviceKey: service.key,
-            selectedDate: dateStr,
-          }).catch((err) => {
-            console.error(`Setmore slots lookup failed for ${dateStr}:`, err.message);
-            return [];
-          });
-          if (slots && slots.length > 0) {
-            chosenSlot = { dateStr, time: slots[0] };
-          }
-        }
-
-        if (chosenSlot) {
-          console.log("DEBUG chosenSlot:", JSON.stringify(chosenSlot));
-          const startTime = `${chosenSlot.dateStr.split("/").reverse().join("-")}T${to24Hour(chosenSlot.time)}`;
-          const appt = await setmore.bookAppointment({
-            refreshToken,
-            staffKey,
-            serviceKey: service.key,
-            customerKey,
-            startTime,
-            endTime: addMinutes(startTime, 45),
-          });
-          if (appt) {
-            realBookingLabel = `${chosenSlot.dateStr} at ${chosenSlot.time}`;
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Setmore booking attempt failed, falling back to placeholder time:", err.message);
-    }
 
     leadSummary = {
       id: leadId,
