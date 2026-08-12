@@ -33,18 +33,18 @@ const CAPTURE_LEAD_TOOL = {
         type: "string",
         description: "A brief 1-2 sentence summary of what they want, in plain language, including their answer to your follow-up question.",
       },
-      slot_choice: {
-        type: ["integer", "null"],
-        description: "1, 2, or 3 matching the offered time options, or null if they declined every option.",
+      time_preference: {
+        type: ["string", "null"],
+        enum: ["morning", "afternoon", "evening", null],
+        description: "Their preferred time of day for a callback, or null if they didn't give one.",
       },
     },
     required: ["name", "contact", "category", "notes"],
   },
 };
 
-function buildSystemPrompt({ studioName, slots }) {
+function buildSystemPrompt({ studioName }) {
   const categoryList = CATEGORY_KEYS.map((k) => `- ${k}: ${CATEGORIES[k].label}`).join("\n");
-  const slotList = slots.map((s) => `${s.id}) ${s.label}`).join("\n");
   return `You are the AI Receptionist for ${studioName}, a dance studio. You are warm, concise, and efficient — you are texting with a prospective student, not writing an essay. Keep every reply to 1-3 short sentences, plain conversational language, no bullet points.
 
 Your job in this conversation, one step at a time:
@@ -53,12 +53,10 @@ ${categoryList}
    If their first message is vague, ask ONE friendly clarifying question instead of guessing.
 2. Ask exactly one smart, natural follow-up question relevant to their category (e.g. wedding date for a wedding inquiry, child's age for a kids inquiry, experience level for competitive). Don't ask more than one question per reply.
 3. Collect their name and best contact info (phone number or email) — one at a time, not both in the same question.
-4. Once you have their name and contact info, share these times that tend to work well and ask which one is best for them:
-${slotList}
-   IMPORTANT: These are NOT a live, confirmed calendar — they are typical openings. Never say a time is "booked" or "confirmed." Instead say something like "that time usually works well — we'll follow up shortly to lock it in" or "we'll confirm that with you." Accept a reply like a number ("2"), a day name ("Monday works"), or a decline ("none of those work"/"different time").
-5. As soon as you have ALL of: their category, name, contact info, AND their response to the time question (a choice or a decline), call the capture_lead tool with everything you've learned, and say a short warm closing line in the same reply. Never claim the appointment is booked — say a real person will confirm the exact time with them soon.
+4. Once you have their name and contact info, ask whether mornings, afternoons, or evenings tend to work best for a quick call — do not offer or mention any specific times, dates, or slots. This is just a general preference so a real person can follow up.
+5. As soon as you have ALL of: their category, name, contact info, AND their time-of-day preference (or that they don't have one), call the capture_lead tool with everything you've learned, and say a short warm closing line in the same reply — something like "a real person will call you shortly to find a time that works." Never mention or imply a specific date, time, or booked appointment.
 
-Never call capture_lead before you have all four pieces of information. Never ask about things you already know. Never state or imply that a time slot is confirmed, booked, or guaranteed — a human always confirms the real time afterward. Stay natural and conversational throughout — you're a friendly human-sounding receptionist, not a form.`;
+Never call capture_lead before you have all four pieces of information. Never ask about things you already know. Never state or imply a specific date or time — only ask for a general morning/afternoon/evening preference, and let a human confirm the actual time afterward. Stay natural and conversational throughout — you're a friendly human-sounding receptionist, not a form.`;
 }
 
 /**
@@ -90,7 +88,7 @@ async function getReceptionistReply({ apiKey, studioName, slots, history, userMe
     body: JSON.stringify({
       model: DEFAULT_MODEL,
       max_tokens: 500,
-      system: buildSystemPrompt({ studioName, slots }),
+      system: buildSystemPrompt({ studioName }),
       tools: [CAPTURE_LEAD_TOOL],
       messages,
     }),
