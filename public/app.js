@@ -158,20 +158,24 @@ async function refreshLeads() {
   }
   el.innerHTML = "";
   allLeads.forEach((lead) => {
-    const row = document.createElement("div");
-    row.className = "lead-row";
-    const tagColor = lead.pipeline_stage === "Appointment Booked" ? "var(--hot)" : "var(--warm)";
-    const stageLine = lead.appointment_label
-      ? `📅 ${escapeHtml(lead.appointment_label)} · ${escapeHtml(lead.assigned_instructor || "")}`
-      : `⏳ ${escapeHtml(lead.pipeline_stage)} · ${escapeHtml(lead.assigned_instructor || "")}`;
-    row.innerHTML = `
-      <div><span class="name">${escapeHtml(lead.name || "(no name)")}</span>
-        <span class="tag" style="background:${tagColor}">${escapeHtml(lead.dance_interest || "")}</span>
-      </div>
-      <div class="meta">${escapeHtml(lead.recommended_product || "")} · $${Number(lead.potential_revenue || 0).toLocaleString()} · Engagement ${lead.engagement}/5</div>
-      <div class="meta">${stageLine}</div>`;
-    el.appendChild(row);
-  });
+  const row = document.createElement("div");
+  row.className = "lead-row";
+  const tagColor = lead.pipeline_stage === "Appointment Booked" ? "var(--hot)" : "var(--warm)";
+  const stageLine = lead.appointment_label
+    ? `📅 ${escapeHtml(lead.appointment_label)} · ${escapeHtml(lead.assigned_instructor || "")}`
+    : `⏳ ${escapeHtml(lead.pipeline_stage)} · ${escapeHtml(lead.assigned_instructor || "")}`;
+  const prefLine = lead.time_preference
+    ? `<div class="meta">🕐 Best time: ${escapeHtml(lead.time_preference.charAt(0).toUpperCase() + lead.time_preference.slice(1))}</div>`
+    : "";
+  row.innerHTML = `
+    <div><span class="name">${escapeHtml(lead.name || "(no name)")}</span>
+      <span class="tag" style="background:${tagColor}">${escapeHtml(lead.dance_interest || "")}</span>
+    </div>
+    <div class="meta">${escapeHtml(lead.recommended_product || "")} · $${Number(lead.potential_revenue || 0).toLocaleString()} · Engagement ${lead.engagement}/5</div>
+    <div class="meta">${stageLine}</div>
+    ${prefLine}`;
+  el.appendChild(row);
+});
 }
 
 // ============================================================
