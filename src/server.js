@@ -381,6 +381,10 @@ router.post("/api/instructors", async ({ res, body }) => {
 router.patch("/api/instructors/:id", async ({ res, params, body }) => {
   const fields = [];
   const values = [];
+  if (typeof body.name === "string" && body.name.trim()) {
+    fields.push("name = ?");
+    values.push(body.name.trim());
+  }
   if (typeof body.active === "boolean") {
     fields.push("active = ?");
     values.push(body.active ? 1 : 0);
@@ -391,8 +395,12 @@ router.patch("/api/instructors/:id", async ({ res, params, body }) => {
   }
   if (fields.length === 0) return sendJson(res, 400, { error: "Nothing to update" });
   values.push(params.id);
-  db.prepare(`UPDATE instructors SET ${fields.join(", ")} WHERE id = ?`).run(...values);
-  sendJson(res, 200, { ok: true });
+  try {
+    db.prepare(`UPDATE instructors SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    sendJson(res, 409, { error: "An instructor with that name already exists" });
+  }
 });
 
 router.delete("/api/instructors/:id", async ({ res, params }) => {
