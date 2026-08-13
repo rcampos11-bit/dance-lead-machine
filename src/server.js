@@ -11,11 +11,17 @@ const { Router, sendJson, sendText, serveStatic } = require("./router");
 const { openDb } = require("./db");
 const { getReceptionistReply } = require("./ai");
 const {
-  CATEGORIES,
   generateSlots,
   pickInstructor,
   generateSequenceSteps,
 } = require("./logic");
+const {
+  getCategories,
+  getCategoryForKey,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+} = require("./pricing");
 
 const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
@@ -31,7 +37,13 @@ const staticHandler = serveStatic(PUBLIC_DIR);
 // ---- admin auth helpers ----
 function isAdminPath(pathname) {
   if (pathname === "/admin.html") return true;
-  const adminApiPrefixes = ["/api/leads", "/api/sequences", "/api/instructors", "/api/setmore"];
+  const adminApiPrefixes = [
+    "/api/leads",
+    "/api/sequences",
+    "/api/instructors",
+    "/api/setmore",
+    "/api/pricing",
+  ];
   return adminApiPrefixes.some(
     (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + ".")
   );
@@ -156,7 +168,19 @@ router.post("/api/chat", async ({ req, res, body }) => {
   if (aiResult.toolCall) {
     const tc = aiResult.toolCall;
     const { email, phone } = extractContact(tc.contact || "");
-    const cat = CATEGORIES[tc.category] || CATEGORIES.beginner;
+
+    // Pricing categories are now database-backed and admin-editable
+    // (see src/pricing.js) instead of the old hardcoded CATEGORIES map
+    // in logic.js. getCategoryForKey falls back to any active category
+    // if the AI's chosen key no longer exists (renamed/removed), and
+    // returns null only if there are zero active categories at all.
+    const cat = getCategoryForKey(db, tc.category);
+    if (!cat) {
+      return sendJson(res, 500, {
+        error: "No active pricing categories are configured. Add one in the admin Pricing tab.",
+        sessionId,
+      });
+    }
 
     const timePreference = tc.time_preference || null;
 
@@ -373,6 +397,33 @@ router.patch("/api/instructors/:id", async ({ res, params, body }) => {
 
 router.delete("/api/instructors/:id", async ({ res, params }) => {
   db.prepare("DELETE FROM instructors WHERE id = ?").run(params.id);
+  sendJson(res, 200, { ok: true });
+});
+
+// ============================================================
+// Pricing (admin-editable dance categories & rates)
+// ============================================================
+router.get("/api/pricing", async ({ res }) => {
+  sendJson(res, 200, getCategories(db));
+});
+
+router.post("/api/pricing", async ({ res, body }) => {
+  try {
+    const id = addCategory(db, body || {});
+    sendJson(res, 201, { ok: true, id });
+  } catch (e) {
+    sendJson(res, 400, { error: e.message });
+  }
+});
+
+router.patch("/api/pricing/:id", async ({ res, params, body }) => {
+  const updated = updateCategory(db, params.id, body || {});
+  if (!updated) return sendJson(res, 400, { error: "Nothing to update" });
+  sendJson(res, 200, { ok: true });
+});
+
+router.delete("/api/pricing/:id", async ({ res, params }) => {
+  deleteCategory(db, params.id);
   sendJson(res, 200, { ok: true });
 });
 
