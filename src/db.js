@@ -5,9 +5,7 @@
 const { DatabaseSync } = require("node:sqlite");
 const path = require("node:path");
 const fs = require("node:fs");
-
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "data", "dance_lead_machine.db");
-
 function openDb() {
   const dir = path.dirname(DB_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -21,7 +19,6 @@ function openDb() {
       active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-
     CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL,
@@ -43,7 +40,6 @@ function openDb() {
       appointment_date TEXT,
       time_preference TEXT
     );
-
     CREATE TABLE IF NOT EXISTS sequences (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       lead_id INTEGER NOT NULL REFERENCES leads(id),
@@ -51,7 +47,6 @@ function openDb() {
       template_label TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-
     CREATE TABLE IF NOT EXISTS sequence_steps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sequence_id INTEGER NOT NULL REFERENCES sequences(id),
@@ -61,7 +56,6 @@ function openDb() {
       body TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'scheduled'
     );
-
     CREATE TABLE IF NOT EXISTS conversations (
       session_id TEXT PRIMARY KEY,
       state TEXT NOT NULL DEFAULT '{}',
@@ -69,21 +63,23 @@ function openDb() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
-
   // Migration: add time_preference to existing databases that predate this column
   const cols = db.prepare("PRAGMA table_info(leads)").all();
   if (!cols.some((c) => c.name === "time_preference")) {
     db.exec("ALTER TABLE leads ADD COLUMN time_preference TEXT");
   }
-  // Seed default instructors on first run
-  const count = db.prepare("SELECT COUNT(*) AS n FROM instructors").get().n;
-  if (count === 0) {
-    const insert = db.prepare("INSERT INTO instructors (name, specialties, active) VALUES (?, ?, 1)");
-    insert.run("Robert", JSON.stringify(["competitive", "private"]));
-    insert.run("Brigette", JSON.stringify(["wedding", "kids"]));
+  // Seed default instructors on first run — only for studio accounts.
+  // A solo instructor doesn't need a team roster; leads are assigned
+  // directly to the owner in server.js when ACCOUNT_TYPE=solo.
+  const accountType = (process.env.ACCOUNT_TYPE || "studio").toLowerCase();
+  if (accountType !== "solo") {
+    const count = db.prepare("SELECT COUNT(*) AS n FROM instructors").get().n;
+    if (count === 0) {
+      const insert = db.prepare("INSERT INTO instructors (name, specialties, active) VALUES (?, ?, 1)");
+      insert.run("Robert", JSON.stringify(["competitive", "private"]));
+      insert.run("Brigette", JSON.stringify(["wedding", "kids"]));
+    }
   }
-
   return db;
 }
-
 module.exports = { openDb, DB_PATH };
