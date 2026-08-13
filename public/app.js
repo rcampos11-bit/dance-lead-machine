@@ -418,19 +418,108 @@ document.getElementById("addInstructorBtn").addEventListener("click", async () =
 });
 
 // ============================================================
+// Pricing (admin-editable dance categories & rates)
+// ============================================================
+let pricingCategories = [];
+
+async function refreshPricing() {
+  const res = await fetch("/api/pricing");
+  pricingCategories = await res.json();
+  const activeCount = pricingCategories.filter((c) => c.active).length;
+  document.getElementById("pricingCount").textContent = activeCount;
+  document.getElementById("pricingListCount").textContent = pricingCategories.length;
+
+  const el = document.getElementById("pricingList");
+  el.innerHTML = "";
+
+  if (pricingCategories.length === 0) {
+    el.innerHTML = '<div class="empty">No pricing categories yet — add one to the left.</div>';
+    return;
+  }
+
+  pricingCategories.forEach((cat) => {
+    const card = document.createElement("div");
+    card.className = "instructor-card" + (cat.active ? "" : " inactive");
+    card.innerHTML = `
+      <div class="ic-head">
+        <span class="ic-name">${escapeHtml(cat.label)}</span>
+        <span class="channel-badge" style="background:${cat.active ? "var(--navy-light)" : "#999"}">${cat.active ? "ACTIVE" : "INACTIVE"}</span>
+      </div>
+      <div class="ic-specialty">${escapeHtml(cat.product)}</div>
+      <div class="ic-stats">
+        <div class="stat"><div class="num">$${Number(cat.revenue || 0).toLocaleString()}</div><div class="lbl">Revenue</div></div>
+        <div class="stat"><div class="num">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
+      </div>
+      <div class="ic-actions">
+        <button data-action="toggle" data-id="${cat.id}">${cat.active ? "Set Inactive" : "Set Active"}</button>
+        <button data-action="remove" data-id="${cat.id}" class="danger">Remove</button>
+      </div>`;
+    el.appendChild(card);
+  });
+
+  el.querySelectorAll("button[data-action]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      if (btn.dataset.action === "toggle") {
+        const cat = pricingCategories.find((c) => String(c.id) === String(id));
+        await fetch(`/api/pricing/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ active: !cat.active }),
+        });
+      } else if (btn.dataset.action === "remove") {
+        await fetch(`/api/pricing/${id}`, { method: "DELETE" });
+      }
+      await refreshPricing();
+    });
+  });
+}
+
+document.getElementById("addPricingBtn").addEventListener("click", async () => {
+  const labelInput = document.getElementById("newPricingLabel");
+  const productInput = document.getElementById("newPricingProduct");
+  const revenueInput = document.getElementById("newPricingRevenue");
+  const label = labelInput.value.trim();
+  const product = productInput.value.trim();
+  const revenue = revenueInput.value;
+  if (!label) {
+    showToast("Enter a category label first.");
+    return;
+  }
+  const res = await fetch("/api/pricing", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label, product, revenue }),
+  });
+  if (res.ok) {
+    labelInput.value = "";
+    productInput.value = "";
+    revenueInput.value = "";
+    await refreshPricing();
+    showToast(`${label} added to pricing.`);
+  } else {
+    const data = await res.json();
+    showToast(data.error || "Couldn't add category.");
+  }
+});
+
+// ============================================================
 // Tabs + toast + health check
 // ============================================================
 function switchTab(which) {
   document.getElementById("view-receptionist").classList.toggle("view-hidden", which !== "receptionist");
   document.getElementById("view-followup").classList.toggle("view-hidden", which !== "followup");
   document.getElementById("view-team").classList.toggle("view-hidden", which !== "team");
+  document.getElementById("view-pricing").classList.toggle("view-hidden", which !== "pricing");
   document.getElementById("tabBtnReceptionist").classList.toggle("active", which === "receptionist");
   document.getElementById("tabBtnFollowup").classList.toggle("active", which === "followup");
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
+  document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
 document.getElementById("tabBtnTeam").addEventListener("click", () => switchTab("team"));
+document.getElementById("tabBtnPricing").addEventListener("click", () => switchTab("pricing"));
 
 function showToast(text) {
   const t = document.getElementById("toast");
@@ -464,3 +553,4 @@ renderSequenceLibrary();
 populateSpecialtyChecks();
 checkHealth();
 refreshLeads().then(() => Promise.all([refreshSequences(), refreshRoster()]));
+refreshPricing();
