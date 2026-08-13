@@ -330,6 +330,55 @@ function populateSpecialtyChecks() {
 }
 
 let roster = [];
+let editingInstructorId = null;
+
+function renderInstructorCard(inst, instLeads, booked, revenue) {
+  const card = document.createElement("div");
+  card.className = "instructor-card" + (inst.active ? "" : " inactive");
+
+  if (editingInstructorId === inst.id) {
+    const specChecksHtml = Object.entries(CATEGORY_LABELS)
+      .map(([key, label]) => {
+        const checked = inst.specialties.includes(key) ? "checked" : "";
+        return `<label><input type="checkbox" class="edit-spec" value="${key}" ${checked}> ${escapeHtml(label)}</label>`;
+      })
+      .join("");
+    card.innerHTML = `
+      <div class="ic-head">
+        <span class="ic-name">Editing: ${escapeHtml(inst.name)}</span>
+      </div>
+      <div class="add-instructor-form" style="margin:0;">
+        <input type="text" class="edit-name" value="${escapeHtml(inst.name)}" placeholder="Instructor name">
+        <div class="specialty-checks">${specChecksHtml}</div>
+      </div>
+      <div class="ic-actions">
+        <button data-action="save" data-id="${inst.id}">Save</button>
+        <button data-action="cancel" data-id="${inst.id}" class="danger">Cancel</button>
+      </div>`;
+    return card;
+  }
+
+  const specLabels = inst.specialties.length
+    ? inst.specialties.map((k) => CATEGORY_LABELS[k] || k).join(", ")
+    : "No specialty — general rotation";
+  card.innerHTML = `
+    <div class="ic-head">
+      <span class="ic-name">${escapeHtml(inst.name)}</span>
+      <span class="channel-badge" style="background:${inst.active ? "var(--navy-light)" : "#999"}">${inst.active ? "ACTIVE" : "INACTIVE"}</span>
+    </div>
+    <div class="ic-specialty">${escapeHtml(specLabels)}</div>
+    <div class="ic-stats">
+      <div class="stat"><div class="num">${instLeads.length}</div><div class="lbl">Leads</div></div>
+      <div class="stat"><div class="num">${booked}</div><div class="lbl">Booked</div></div>
+      <div class="stat"><div class="num">$${revenue.toLocaleString()}</div><div class="lbl">Potential</div></div>
+    </div>
+    <div class="ic-actions">
+      <button data-action="edit" data-id="${inst.id}">Edit</button>
+      <button data-action="toggle" data-id="${inst.id}">${inst.active ? "Set Inactive" : "Set Active"}</button>
+      <button data-action="remove" data-id="${inst.id}" class="danger">Remove</button>
+    </div>`;
+  return card;
+}
 
 async function refreshRoster() {
   const res = await fetch("/api/instructors");
@@ -343,28 +392,7 @@ async function refreshRoster() {
     const instLeads = allLeads.filter((l) => l.assigned_instructor === inst.name);
     const booked = instLeads.filter((l) => l.pipeline_stage === "Appointment Booked").length;
     const revenue = instLeads.reduce((sum, l) => sum + Number(l.potential_revenue || 0), 0);
-
-    const card = document.createElement("div");
-    card.className = "instructor-card" + (inst.active ? "" : " inactive");
-    const specLabels = inst.specialties.length
-      ? inst.specialties.map((k) => CATEGORY_LABELS[k] || k).join(", ")
-      : "No specialty — general rotation";
-    card.innerHTML = `
-      <div class="ic-head">
-        <span class="ic-name">${escapeHtml(inst.name)}</span>
-        <span class="channel-badge" style="background:${inst.active ? "var(--navy-light)" : "#999"}">${inst.active ? "ACTIVE" : "INACTIVE"}</span>
-      </div>
-      <div class="ic-specialty">${escapeHtml(specLabels)}</div>
-      <div class="ic-stats">
-        <div class="stat"><div class="num">${instLeads.length}</div><div class="lbl">Leads</div></div>
-        <div class="stat"><div class="num">${booked}</div><div class="lbl">Booked</div></div>
-        <div class="stat"><div class="num">$${revenue.toLocaleString()}</div><div class="lbl">Potential</div></div>
-      </div>
-      <div class="ic-actions">
-        <button data-action="toggle" data-id="${inst.id}">${inst.active ? "Set Inactive" : "Set Active"}</button>
-        <button data-action="remove" data-id="${inst.id}" class="danger">Remove</button>
-      </div>`;
-    el.appendChild(card);
+    el.appendChild(renderInstructorCard(inst, instLeads, booked, revenue));
   });
 
   const unassignedLeads = allLeads.filter((l) => !roster.some((i) => i.name === l.assigned_instructor && i.active));
@@ -378,17 +406,59 @@ async function refreshRoster() {
   el.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
-      if (btn.dataset.action === "toggle") {
+      const action = btn.dataset.action;
+
+      if (action === "edit") {
+        editingInstructorId = Number(id);
+        await refreshRoster();
+        return;
+      }
+
+      if (action === "cancel") {
+        editingInstructorId = null;
+        await refreshRoster();
+        return;
+      }
+
+      if (action === "save") {
+        const card = btn.closest(".instructor-card");
+        const name = card.querySelector(".edit-name").value.trim();
+        const specialties = Array.from(card.querySelectorAll(".edit-spec:checked")).map((cb) => cb.value);
+        if (!name) {
+          showToast("Name can't be empty.");
+          return;
+        }
+        const res = await fetch(`/api/instructors/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name, specialties }),
+        });
+        if (res.ok) {
+          editingInstructorId = null;
+          await refreshRoster();
+          showToast("Instructor updated.");
+        } else {
+          const data = await res.json();
+          showToast(data.error || "Couldn't save changes.");
+        }
+        return;
+      }
+
+      if (action === "toggle") {
         const inst = roster.find((i) => String(i.id) === String(id));
         await fetch(`/api/instructors/${id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ active: !inst.active }),
         });
-      } else if (btn.dataset.action === "remove") {
-        await fetch(`/api/instructors/${id}`, { method: "DELETE" });
+        await refreshRoster();
+        return;
       }
-      await refreshRoster();
+
+      if (action === "remove") {
+        await fetch(`/api/instructors/${id}`, { method: "DELETE" });
+        await refreshRoster();
+      }
     });
   });
 }
