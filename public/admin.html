@@ -23,6 +23,7 @@
     <button class="tab-btn active" id="tabBtnReceptionist">💬 AI Receptionist</button>
     <button class="tab-btn" id="tabBtnFollowup">🔁 Automated Follow-Up <span class="count-pill" id="fuCount">0</span></button>
     <button class="tab-btn" id="tabBtnTeam">🏢 Studio Team <span class="count-pill" id="teamCount">0</span></button>
+    <button class="tab-btn" id="tabBtnPricing">💰 Pricing <span class="count-pill" id="pricingCount">0</span></button>
   </div>
 
   <div id="view-receptionist">
@@ -147,10 +148,44 @@
       </div>
     </div>
   </div>
+
+  <div id="view-pricing" class="view-hidden">
+    <div class="team-layout">
+      <div class="side">
+        <div class="card">
+          <h3>Add a Pricing Category</h3>
+          <p class="hint">Every category the AI receptionist can recommend, with the product name and typical revenue it represents. A URL-safe key is generated automatically from the label.</p>
+          <div class="add-instructor-form">
+            <input type="text" id="newPricingLabel" placeholder="Category label, e.g. Wedding Dance">
+            <input type="text" id="newPricingProduct" placeholder="Product name, e.g. Wedding Package (Private Lessons)">
+            <input type="number" id="newPricingRevenue" placeholder="Typical revenue, e.g. 900" min="0" step="1">
+            <button id="addPricingBtn">+ Add Category</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>How pricing is used</h3>
+          <ul class="how-it-works">
+            <li><b>Live for the AI</b> — the receptionist recommends whichever active category best fits the inquiry.</li>
+            <li><b>Revenue drives reporting</b> — the number here becomes each lead's potential revenue in the Leads tab.</li>
+            <li><b>Toggle categories off</b> — inactive categories are skipped by the AI but stay in your history.</li>
+            <li><b>Reorder anytime</b> — drag or edit sort order so your most common offerings come first.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="card">
+          <h3>Pricing Categories <span class="count-pill" id="pricingListCount">0</span></h3>
+          <p class="hint">Live from the database — edits here take effect on the next chat message.</p>
+          <div id="pricingList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=2"></script>
+<script src="/app.js?v=3"></script>
 </body>
 </html>
