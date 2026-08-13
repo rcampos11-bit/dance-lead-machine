@@ -421,6 +421,46 @@ document.getElementById("addInstructorBtn").addEventListener("click", async () =
 // Pricing (admin-editable dance categories & rates)
 // ============================================================
 let pricingCategories = [];
+let editingPricingId = null;
+
+function renderPricingCard(cat) {
+  const card = document.createElement("div");
+  card.className = "instructor-card" + (cat.active ? "" : " inactive");
+
+  if (editingPricingId === cat.id) {
+    card.innerHTML = `
+      <div class="ic-head">
+        <span class="ic-name">Editing: ${escapeHtml(cat.label)}</span>
+      </div>
+      <div class="add-instructor-form" style="margin:0;">
+        <input type="text" class="edit-label" value="${escapeHtml(cat.label)}" placeholder="Category label">
+        <input type="text" class="edit-product" value="${escapeHtml(cat.product)}" placeholder="Product name">
+        <input type="number" class="edit-revenue" value="${Number(cat.revenue || 0)}" placeholder="Typical revenue" min="0" step="1">
+      </div>
+      <div class="ic-actions">
+        <button data-action="save" data-id="${cat.id}">Save</button>
+        <button data-action="cancel" data-id="${cat.id}" class="danger">Cancel</button>
+      </div>`;
+    return card;
+  }
+
+  card.innerHTML = `
+    <div class="ic-head">
+      <span class="ic-name">${escapeHtml(cat.label)}</span>
+      <span class="channel-badge" style="background:${cat.active ? "var(--navy-light)" : "#999"}">${cat.active ? "ACTIVE" : "INACTIVE"}</span>
+    </div>
+    <div class="ic-specialty">${escapeHtml(cat.product)}</div>
+    <div class="ic-stats">
+      <div class="stat"><div class="num">$${Number(cat.revenue || 0).toLocaleString()}</div><div class="lbl">Revenue</div></div>
+      <div class="stat"><div class="num">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
+    </div>
+    <div class="ic-actions">
+      <button data-action="edit" data-id="${cat.id}">Edit</button>
+      <button data-action="toggle" data-id="${cat.id}">${cat.active ? "Set Inactive" : "Set Active"}</button>
+      <button data-action="remove" data-id="${cat.id}" class="danger">Remove</button>
+    </div>`;
+  return card;
+}
 
 async function refreshPricing() {
   const res = await fetch("/api/pricing");
@@ -438,39 +478,66 @@ async function refreshPricing() {
   }
 
   pricingCategories.forEach((cat) => {
-    const card = document.createElement("div");
-    card.className = "instructor-card" + (cat.active ? "" : " inactive");
-    card.innerHTML = `
-      <div class="ic-head">
-        <span class="ic-name">${escapeHtml(cat.label)}</span>
-        <span class="channel-badge" style="background:${cat.active ? "var(--navy-light)" : "#999"}">${cat.active ? "ACTIVE" : "INACTIVE"}</span>
-      </div>
-      <div class="ic-specialty">${escapeHtml(cat.product)}</div>
-      <div class="ic-stats">
-        <div class="stat"><div class="num">$${Number(cat.revenue || 0).toLocaleString()}</div><div class="lbl">Revenue</div></div>
-        <div class="stat"><div class="num">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
-      </div>
-      <div class="ic-actions">
-        <button data-action="toggle" data-id="${cat.id}">${cat.active ? "Set Inactive" : "Set Active"}</button>
-        <button data-action="remove" data-id="${cat.id}" class="danger">Remove</button>
-      </div>`;
-    el.appendChild(card);
+    el.appendChild(renderPricingCard(cat));
   });
 
   el.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
-      if (btn.dataset.action === "toggle") {
+      const action = btn.dataset.action;
+
+      if (action === "edit") {
+        editingPricingId = Number(id);
+        await refreshPricing();
+        return;
+      }
+
+      if (action === "cancel") {
+        editingPricingId = null;
+        await refreshPricing();
+        return;
+      }
+
+      if (action === "save") {
+        const card = btn.closest(".instructor-card");
+        const label = card.querySelector(".edit-label").value.trim();
+        const product = card.querySelector(".edit-product").value.trim();
+        const revenue = card.querySelector(".edit-revenue").value;
+        if (!label) {
+          showToast("Label can't be empty.");
+          return;
+        }
+        const res = await fetch(`/api/pricing/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ label, product, revenue: Number(revenue) || 0 }),
+        });
+        if (res.ok) {
+          editingPricingId = null;
+          await refreshPricing();
+          showToast("Category updated.");
+        } else {
+          const data = await res.json();
+          showToast(data.error || "Couldn't save changes.");
+        }
+        return;
+      }
+
+      if (action === "toggle") {
         const cat = pricingCategories.find((c) => String(c.id) === String(id));
         await fetch(`/api/pricing/${id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ active: !cat.active }),
         });
-      } else if (btn.dataset.action === "remove") {
-        await fetch(`/api/pricing/${id}`, { method: "DELETE" });
+        await refreshPricing();
+        return;
       }
-      await refreshPricing();
+
+      if (action === "remove") {
+        await fetch(`/api/pricing/${id}`, { method: "DELETE" });
+        await refreshPricing();
+      }
     });
   });
 }
