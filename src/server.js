@@ -22,9 +22,12 @@ const {
   updateCategory,
   deleteCategory,
 } = require("./pricing");
+const { sendSms, sendEmail } = require("./notify");
 
 const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
+const ACCOUNT_TYPE = (process.env.ACCOUNT_TYPE || "studio").toLowerCase(); // "solo" or "studio"
+const OWNER_NAME = process.env.OWNER_NAME || STUDIO_NAME;
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
@@ -184,9 +187,14 @@ router.post("/api/chat", async ({ req, res, body }) => {
 
     const timePreference = tc.time_preference || null;
 
-    const roster = getRoster();
-    const load = getLoadByInstructor();
-    const instructor = pickInstructor(tc.category, roster, load);
+    let instructor;
+    if (ACCOUNT_TYPE === "solo") {
+      instructor = OWNER_NAME;
+    } else {
+      const roster = getRoster();
+      const load = getLoadByInstructor();
+      instructor = pickInstructor(tc.category, roster, load);
+    }
 
     const leadRow = {
       name: tc.name,
@@ -460,13 +468,66 @@ router.get("/api/health", async ({ res }) => {
     ok: true,
     hasApiKey: !!process.env.ANTHROPIC_API_KEY,
     studioName: STUDIO_NAME,
+    accountType: ACCOUNT_TYPE,
+    hasTwilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
+    hasSendGrid: !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL),
     time: new Date().toISOString(),
   });
 });
 
 // ============================================================
-// Server bootstrap
+// Scheduler — the piece that actually sends what sequence_steps
+// only used to schedule. Runs on an interval inside this process;
+// no external cron needed since this server stays up 24/7 on
+// Render. Picks up any step that's due (send_date_sort <= today)
+// and still marked "scheduled", sends it via Twilio or SendGrid
+// depending on channel, and flips it to "sent" only on success —
+// a failed send is left "scheduled" so the next tick retries it.
 // ============================================================
+async function processDueSends() {
+  const today = new Date().toISOString().slice(0, 10);
+  const dueSteps = db
+    .prepare(
+      `SELECT ss.*, s.lead_id
+       FROM sequence_steps ss
+       JOIN sequences s ON s.id = ss.sequence_id
+       WHERE ss.status = 'scheduled' AND ss.send_date_sort <= ?`
+    )
+    .all(today);
+
+  for (const step of dueSteps) {
+    const lead = db.prepare("SELECT * FROM leads WHERE id = ?").get(step.lead_id);
+    if (!lead) continue;
+
+    try {
+      if (step.channel === "text") {
+        await sendSms({ to: lead.phone, body: step.body });
+      } else if (step.channel === "email") {
+        await sendEmail({ to: lead.email, subject: `A message from ${STUDIO_NAME}`, body: step.body });
+      } else {
+        continue;
+      }
+      db.prepare("UPDATE sequence_steps SET status = 'sent' WHERE id = ?").run(step.id);
+    } catch (err) {
+      console.warn(`Send failed for sequence_step ${step.id} (lead ${step.lead_id}, ${step.channel}): ${err.message}`);
+      // Left as "scheduled" — picked up again on the next tick.
+    }
+  }
+
+  return dueSteps.length;
+}
+
+// Manual trigger — useful for testing without waiting for the interval.
+router.post("/api/sequences/process-due", async ({ res }) => {
+  try {
+    const count = await processDueSends();
+    sendJson(res, 200, { ok: true, checked: count });
+  } catch (err) {
+    sendJson(res, 500, { error: err.message });
+  }
+});
+
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -508,6 +569,16 @@ if (require.main === module) {
     if (!process.env.ADMIN_PASSWORD) {
       console.warn("WARNING: ADMIN_PASSWORD is not set. /admin.html will be locked out entirely until it is.");
     }
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.SENDGRID_API_KEY) {
+      console.warn("WARNING: Twilio and/or SendGrid are not fully configured. Scheduled sends will be checked but will fail until credentials are set.");
+    }
+    // Check for due sends every 5 minutes. Also run once shortly after
+    // boot so a step that came due while the server was down doesn't
+    // wait a full 5 minutes after restart.
+    setTimeout(() => processDueSends().catch((e) => console.warn("processDueSends error:", e.message)), 15000);
+    setInterval(() => {
+      processDueSends().catch((e) => console.warn("processDueSends error:", e.message));
+    }, 5 * 60 * 1000);
   });
 }
 
