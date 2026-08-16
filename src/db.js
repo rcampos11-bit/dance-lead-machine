@@ -12,15 +12,25 @@ function openDb() {
   const db = new DatabaseSync(DB_PATH);
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(`
+    CREATE TABLE IF NOT EXISTS tenants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      admin_user TEXT NOT NULL DEFAULT 'admin',
+      admin_password TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS instructors (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
       specialties TEXT NOT NULL DEFAULT '[]',
       active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(tenant_id, name)
     );
     CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
       session_id TEXT NOT NULL,
       name TEXT,
       phone TEXT,
@@ -42,6 +52,7 @@ function openDb() {
     );
     CREATE TABLE IF NOT EXISTS sequences (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
       lead_id INTEGER NOT NULL REFERENCES leads(id),
       template_key TEXT NOT NULL,
       template_label TEXT NOT NULL,
@@ -58,24 +69,50 @@ function openDb() {
     );
     CREATE TABLE IF NOT EXISTS conversations (
       session_id TEXT PRIMARY KEY,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
       state TEXT NOT NULL DEFAULT '{}',
       messages TEXT NOT NULL DEFAULT '[]',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
   // Migration: add time_preference to existing databases that predate this column
-  const cols = db.prepare("PRAGMA table_info(leads)").all();
-  if (!cols.some((c) => c.name === "time_preference")) {
+  const leadCols = db.prepare("PRAGMA table_info(leads)").all();
+  if (!leadCols.some((c) => c.name === "time_preference")) {
     db.exec("ALTER TABLE leads ADD COLUMN time_preference TEXT");
   }
+
+  // Migration: add tenant_id to any pre-existing databases that predate
+  // multi-tenancy. New installs get it from CREATE TABLE above already;
+  // this only fires on databases created before this change shipped.
+  for (const [table] of [["instructors"], ["leads"], ["sequences"], ["conversations"]]) {
+    const tCols = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!tCols.some((c) => c.name === "tenant_id")) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN tenant_id INTEGER NOT NULL DEFAULT 1`);
+    }
+  }
+
+  // Ensure a default tenant (id 1) exists — this is "your" studio account,
+  // and is where all pre-multi-tenancy data lives after migration above.
+  const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
+  if (tenantCount === 0) {
+    db.prepare(
+      "INSERT INTO tenants (id, name, admin_user, admin_password) VALUES (1, ?, ?, ?)"
+    ).run(
+      process.env.STUDIO_NAME || "Dance Lead Machine Studio",
+      process.env.ADMIN_USER || "admin",
+      process.env.ADMIN_PASSWORD || ""
+    );
+  }
+
   // Seed default instructors on first run — only for studio accounts.
   // A solo instructor doesn't need a team roster; leads are assigned
   // directly to the owner in server.js when ACCOUNT_TYPE=solo.
   const accountType = (process.env.ACCOUNT_TYPE || "studio").toLowerCase();
   if (accountType !== "solo") {
-    const count = db.prepare("SELECT COUNT(*) AS n FROM instructors").get().n;
+    const count = db.prepare("SELECT COUNT(*) AS n FROM instructors WHERE tenant_id = 1").get().n;
     if (count === 0) {
-      const insert = db.prepare("INSERT INTO instructors (name, specialties, active) VALUES (?, ?, 1)");
+      const insert = db.prepare("INSERT INTO instructors (tenant_id, name, specialties, active) VALUES (1, ?, ?, 1)");
       insert.run("Robert", JSON.stringify(["competitive", "private"]));
       insert.run("Brigette", JSON.stringify(["wedding", "kids"]));
     }
