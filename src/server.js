@@ -255,15 +255,17 @@ router.post("/api/chat", async ({ req, res, body }) => {
     state.leadId = leadId;
 
     leadSummary = {
-      id: leadId,
-      name: tc.name,
-      danceInterest: cat.label,
-      recommendedProduct: cat.product,
-      potentialRevenue: cat.revenue,
-      assignedInstructor: instructor,
-      pipelineStage: "Qualified",
-      timePreference,
-    };
+  id: leadId,
+  name: tc.name,
+  email,
+  phone,
+  danceInterest: cat.label,
+  recommendedProduct: cat.product,
+  potentialRevenue: cat.revenue,
+  assignedInstructor: instructor,
+  pipelineStage: "Qualified",
+  timePreference,
+};
   }
 
   db.prepare("UPDATE conversations SET state = ?, messages = ?, updated_at = datetime('now') WHERE session_id = ?").run(
