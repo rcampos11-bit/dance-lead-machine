@@ -180,7 +180,7 @@ const phone = (tc.phone || "").trim();
     // in logic.js. getCategoryForKey falls back to any active category
     // if the AI's chosen key no longer exists (renamed/removed), and
     // returns null only if there are zero active categories at all.
-    const cat = getCategoryForKey(db, tc.category);
+    const cat = getCategoryForKey(db, tenantId, tc.category);
     if (!cat) {
       return sendJson(res, 500, {
         error: "No active pricing categories are configured. Add one in the admin Pricing tab.",
@@ -246,7 +246,7 @@ const info = insertLead.run(
     const insertSeq = db.prepare(
   "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
 );
-const seqInfo = insertSeq.run(tenantId, leadId, templateKey, steps.length ? templateKeyLabel(templateKey) : templateKey);
+    const info = insertSeq.run(tenantId, leadId, templateKey, templateKeyLabel(templateKey));
     const insertStep = db.prepare(
       "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
     );
@@ -364,9 +364,9 @@ router.post("/api/sequences/simulate", async ({ req, res, body }) => {
   const apptDate = leadRowRaw.appointment_date ? new Date(leadRowRaw.appointment_date) : null;
   const steps = generateSequenceSteps(leadRow, templateKey, apptDate);
   const insertSeq = db.prepare(
-    "INSERT INTO sequences (lead_id, template_key, template_label) VALUES (?, ?, ?)"
-  );
-  const info = insertSeq.run(leadId, templateKey, templateKeyLabel(templateKey));
+  "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
+);
+  const info = insertSeq.run(req.tenantId, leadId, templateKey, templateKeyLabel(templateKey));
   const insertStep = db.prepare(
     "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
   );
@@ -430,27 +430,27 @@ router.delete("/api/instructors/:id", async ({ req, res, params }) => {
 // ============================================================
 // Pricing (admin-editable dance categories & rates)
 // ============================================================
-router.get("/api/pricing", async ({ res }) => {
-  sendJson(res, 200, getCategories(db));
+router.get("/api/pricing", async ({ req, res }) => {
+  sendJson(res, 200, getCategories(db, req.tenantId));
 });
 
-router.post("/api/pricing", async ({ res, body }) => {
+router.post("/api/pricing", async ({ req, res, body }) => {
   try {
-    const id = addCategory(db, body || {});
+    const id = addCategory(db, req.tenantId, body || {});
     sendJson(res, 201, { ok: true, id });
   } catch (e) {
     sendJson(res, 400, { error: e.message });
   }
 });
 
-router.patch("/api/pricing/:id", async ({ res, params, body }) => {
-  const updated = updateCategory(db, params.id, body || {});
+router.patch("/api/pricing/:id", async ({ req, res, params, body }) => {
+  const updated = updateCategory(db, req.tenantId, params.id, body || {});
   if (!updated) return sendJson(res, 400, { error: "Nothing to update" });
   sendJson(res, 200, { ok: true });
 });
 
-router.delete("/api/pricing/:id", async ({ res, params }) => {
-  deleteCategory(db, params.id);
+router.delete("/api/pricing/:id", async ({ req, res, params }) => {
+  deleteCategory(db, req.tenantId, params.id);
   sendJson(res, 200, { ok: true });
 });
 
