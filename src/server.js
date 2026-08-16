@@ -194,8 +194,8 @@ const phone = (tc.phone || "").trim();
     if (ACCOUNT_TYPE === "solo") {
       instructor = OWNER_NAME;
     } else {
-      const roster = getRoster();
-      const load = getLoadByInstructor();
+      const roster = getRoster(tenantId);
+const load = getLoadByInstructor(tenantId);
       instructor = pickInstructor(tc.category, roster, load);
     }
 
@@ -378,15 +378,16 @@ router.post("/api/sequences/simulate", async ({ req, res, body }) => {
 // ============================================================
 // Instructors / Studio Team
 // ============================================================
-router.get("/api/instructors", async ({ res }) => {
-  sendJson(res, 200, getRoster());
+router.get("/api/instructors", async ({ req, res }) => {
+  sendJson(res, 200, getRoster(req.tenantId));
 });
 
-router.post("/api/instructors", async ({ res, body }) => {
+router.post("/api/instructors", async ({ req, res, body }) => {
   const { name, specialties } = body;
   if (!name || !name.trim()) return sendJson(res, 400, { error: "name is required" });
   try {
-    db.prepare("INSERT INTO instructors (name, specialties, active) VALUES (?, ?, 1)").run(
+    db.prepare("INSERT INTO instructors (tenant_id, name, specialties, active) VALUES (?, ?, ?, 1)").run(
+      req.tenantId,
       name.trim(),
       JSON.stringify(specialties || [])
     );
@@ -396,7 +397,7 @@ router.post("/api/instructors", async ({ res, body }) => {
   }
 });
 
-router.patch("/api/instructors/:id", async ({ res, params, body }) => {
+router.patch("/api/instructors/:id", async ({ req, res, params, body }) => {
   const fields = [];
   const values = [];
   if (typeof body.name === "string" && body.name.trim()) {
@@ -412,17 +413,17 @@ router.patch("/api/instructors/:id", async ({ res, params, body }) => {
     values.push(JSON.stringify(body.specialties));
   }
   if (fields.length === 0) return sendJson(res, 400, { error: "Nothing to update" });
-  values.push(params.id);
+  values.push(params.id, req.tenantId);
   try {
-    db.prepare(`UPDATE instructors SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    db.prepare(`UPDATE instructors SET ${fields.join(", ")} WHERE id = ? AND tenant_id = ?`).run(...values);
     sendJson(res, 200, { ok: true });
   } catch (e) {
     sendJson(res, 409, { error: "An instructor with that name already exists" });
   }
 });
 
-router.delete("/api/instructors/:id", async ({ res, params }) => {
-  db.prepare("DELETE FROM instructors WHERE id = ?").run(params.id);
+router.delete("/api/instructors/:id", async ({ req, res, params }) => {
+  db.prepare("DELETE FROM instructors WHERE id = ? AND tenant_id = ?").run(params.id, req.tenantId);
   sendJson(res, 200, { ok: true });
 });
 
