@@ -18,12 +18,13 @@ const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022
 const CAPTURE_LEAD_TOOL = {
   name: "capture_lead",
   description:
-    "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone or email), which category their inquiry falls into, and their response to the appointment time options (a slot number, or that none worked for them). Always also say a short, warm closing line in the same reply.",
+    "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone and/or email), which category their inquiry falls into, and their response to the appointment time options (a slot number, or that none worked for them). Always also say a short, warm closing line in the same reply.",
   input_schema: {
     type: "object",
     properties: {
       name: { type: "string", description: "The prospect's name." },
-      contact: { type: "string", description: "Phone number or email address, whichever they gave." },
+      phone: { type: "string", description: "Their phone number, if they gave one. Empty string if not given." },
+      email: { type: "string", description: "Their email address, if they gave one. Empty string if not given." },
       category: {
         type: "string",
         enum: CATEGORY_KEYS,
@@ -39,7 +40,7 @@ const CAPTURE_LEAD_TOOL = {
         description: "Their preferred time of day for a callback, or null if they didn't give one.",
       },
     },
-    required: ["name", "contact", "category", "notes"],
+    required: ["name", "phone", "email", "category", "notes"],
   },
 };
 
@@ -52,7 +53,7 @@ Your job in this conversation, one step at a time:
 ${categoryList}
    If their first message is vague, ask ONE friendly clarifying question instead of guessing.
 2. Ask exactly one smart, natural follow-up question relevant to their category (e.g. wedding date for a wedding inquiry, child's age for a kids inquiry, experience level for competitive). Don't ask more than one question per reply.
-3. Collect their name and best contact info (phone number or email) — one at a time, not both in the same question.
+3. Collect their name and contact info. Ask for phone and email, and accept whichever they give — one or both. If they only give one, that's fine, don't push for the other.
 4. Once you have their name and contact info, ask whether mornings, afternoons, or evenings tend to work best for a quick call — do not offer or mention any specific times, dates, or slots. This is just a general preference so a real person can follow up.
 5. As soon as you have ALL of: their category, name, contact info, AND their time-of-day preference (or that they don't have one), call the capture_lead tool with everything you've learned, and say a short warm closing line in the same reply — something like "a real person will call you shortly to find a time that works." Never mention or imply a specific date, time, or booked appointment.
 
