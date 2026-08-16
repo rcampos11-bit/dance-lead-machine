@@ -293,13 +293,13 @@ function templateKeyLabel(key) {
 // ============================================================
 // Leads
 // ============================================================
-router.get("/api/leads", async ({ res }) => {
-  const rows = db.prepare("SELECT * FROM leads ORDER BY id DESC").all();
+router.get("/api/leads", async ({ req, res }) => {
+  const rows = db.prepare("SELECT * FROM leads WHERE tenant_id = ? ORDER BY id DESC").all(req.tenantId);
   sendJson(res, 200, rows);
 });
 
-router.get("/api/leads.csv", async ({ res }) => {
-  const rows = db.prepare("SELECT * FROM leads ORDER BY id ASC").all();
+router.get("/api/leads.csv", async ({ req, res }) => {
+  const rows = db.prepare("SELECT * FROM leads WHERE tenant_id = ? ORDER BY id ASC").all(req.tenantId);
   const headers = [
     "Date Added", "Name", "Phone", "Email", "Dance Interest", "Goal / Notes",
     "Lead Source", "Pipeline Stage", "Last Contact", "Next Follow-Up",
@@ -329,8 +329,8 @@ function csvEscape(val) {
 // ============================================================
 // Sequences (follow-up)
 // ============================================================
-router.get("/api/sequences", async ({ res }) => {
-  const seqs = db.prepare("SELECT * FROM sequences ORDER BY id DESC").all();
+router.get("/api/sequences", async ({ req, res }) => {
+  const seqs = db.prepare("SELECT * FROM sequences WHERE tenant_id = ? ORDER BY id DESC").all(req.tenantId);
   const result = seqs.map((seq) => {
     const lead = db.prepare("SELECT name FROM leads WHERE id = ?").get(seq.lead_id);
     const steps = db
@@ -348,9 +348,9 @@ router.get("/api/sequences", async ({ res }) => {
   sendJson(res, 200, result);
 });
 
-router.post("/api/sequences/simulate", async ({ res, body }) => {
+router.post("/api/sequences/simulate", async ({ req, res, body }) => {
   const { leadId, templateKey } = body;
-  const leadRowRaw = db.prepare("SELECT * FROM leads WHERE id = ?").get(leadId);
+  const leadRowRaw = db.prepare("SELECT * FROM leads WHERE id = ? AND tenant_id = ?").get(leadId, req.tenantId);
   if (!leadRowRaw) return sendJson(res, 404, { error: "Lead not found" });
 
   const leadRow = {
