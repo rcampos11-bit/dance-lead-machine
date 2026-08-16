@@ -67,10 +67,11 @@ function checkAdminAuth(req) {
 // ---- helpers ----
 function extractContact(text) {
   const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-  if (emailMatch) return { email: emailMatch[0], phone: "" };
   const phoneMatch = text.match(/(\+?\d[\d\-.\s()]{7,}\d)/);
-  if (phoneMatch) return { email: "", phone: phoneMatch[0].trim() };
-  return { email: "", phone: text.trim() };
+  return {
+    email: emailMatch ? emailMatch[0] : "",
+    phone: phoneMatch ? phoneMatch[0].trim() : "",
+  };
 }
 function to24Hour(timeStr) {
   const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
