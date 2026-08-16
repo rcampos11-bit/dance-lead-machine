@@ -55,6 +55,10 @@ function addLeadCard(lead) {
   const el = document.getElementById("messages");
   const div = document.createElement("div");
   div.className = "lead-card";
+  const contactParts = [];
+  if (lead.phone) contactParts.push(escapeHtml(lead.phone));
+  if (lead.email) contactParts.push(escapeHtml(lead.email));
+  const contactRow = `<tr><td class="k">Contact</td><td>${contactParts.join(" · ") || "—"}</td></tr>`;
   const stageRow = `<tr><td class="k">Status</td><td>Qualified — ${escapeHtml(lead.assignedInstructor)} to schedule personally</td></tr>`;
 const prefRow = lead.timePreference
   ? `<tr><td class="k">Best Time</td><td>${escapeHtml(lead.timePreference.charAt(0).toUpperCase() + lead.timePreference.slice(1))}</td></tr>`
@@ -63,6 +67,7 @@ const prefRow = lead.timePreference
     <h4>✅ Lead captured — saved to the database</h4>
     <table>
       <tr><td class="k">Name</td><td>${escapeHtml(lead.name)}</td></tr>
+      ${contactRow}
       <tr><td class="k">Interest</td><td>${escapeHtml(lead.danceInterest)}</td></tr>
       <tr><td class="k">Recommended</td><td>${escapeHtml(lead.recommendedProduct)}</td></tr>
       <tr><td class="k">Potential Revenue</td><td>$${Number(lead.potentialRevenue).toLocaleString()}</td></tr>
