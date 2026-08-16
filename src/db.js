@@ -74,6 +74,7 @@ function openDb() {
       messages TEXT NOT NULL DEFAULT '[]',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    
   `);
 
   // Migration: add time_preference to existing databases that predate this column
@@ -117,6 +118,26 @@ function openDb() {
       insert.run("Brigette", JSON.stringify(["wedding", "kids"]));
     }
   }
+  const pcCols = db.prepare("PRAGMA table_info(pricing_categories)").all();
+if (pcCols.length > 0 && !pcCols.some((c) => c.name === "tenant_id")) {
+  db.exec(`
+    CREATE TABLE pricing_categories_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      key TEXT NOT NULL,
+      label TEXT NOT NULL,
+      product TEXT NOT NULL,
+      revenue REAL NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(tenant_id, key)
+    );
+    INSERT INTO pricing_categories_new (id, tenant_id, key, label, product, revenue, active, sort_order)
+      SELECT id, 1, key, label, product, revenue, active, sort_order FROM pricing_categories;
+    DROP TABLE pricing_categories;
+    ALTER TABLE pricing_categories_new RENAME TO pricing_categories;
+  `);
+}
   return db;
 }
 module.exports = { openDb, DB_PATH };
