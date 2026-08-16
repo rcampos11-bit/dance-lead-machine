@@ -126,16 +126,18 @@ router.post("/api/chat", async ({ req, res, body }) => {
     return sendJson(res, 400, { error: "message is required" });
   }
 
-  let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ?").get(sessionId);
+  const tenantId = 1; // public chat widget isn't tenant-aware yet — revisit when there's a second customer
+let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND tenant_id = ?").get(sessionId, tenantId);
   let state, messages;
   if (!convo) {
     state = { slots: generateSlots(), done: false };
     messages = [];
-    db.prepare("INSERT INTO conversations (session_id, state, messages) VALUES (?, ?, ?)").run(
-      sessionId,
-      JSON.stringify(state),
-      JSON.stringify(messages)
-    );
+    db.prepare("INSERT INTO conversations (session_id, tenant_id, state, messages) VALUES (?, ?, ?, ?)").run(
+  sessionId,
+  tenantId,
+  JSON.stringify(state),
+  JSON.stringify(messages)
+);
   } else {
     state = JSON.parse(convo.state);
     messages = JSON.parse(convo.messages);
@@ -213,37 +215,38 @@ const phone = (tc.phone || "").trim();
 
     const insertLead = db.prepare(`
   INSERT INTO leads (
-    session_id, name, phone, email, dance_interest, goal_notes, lead_source,
+    tenant_id, session_id, name, phone, email, dance_interest, goal_notes, lead_source,
     pipeline_stage, next_follow_up, assigned_instructor, recommended_product,
     potential_revenue, engagement, appointment_label, appointment_date, time_preference
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `);
-    const info = insertLead.run(
-      sessionId,
-      tc.name,
-      phone,
-      email,
-      cat.label,
-      notes,
-      "AI Receptionist (Website Chat)",
-      "Qualified",
-      null,
-      instructor,
-      cat.product,
-      cat.revenue,
-      4,
-      null,
-      null,
-      timePreference
-    );
+const info = insertLead.run(
+  tenantId,
+  sessionId,
+  tc.name,
+  phone,
+  email,
+  cat.label,
+  notes,
+  "AI Receptionist (Website Chat)",
+  "Qualified",
+  null,
+  instructor,
+  cat.product,
+  cat.revenue,
+  4,
+  null,
+  null,
+  timePreference
+);
     const leadId = info.lastInsertRowid;
 
     const templateKey = "new_inquiry_no_response";
     const steps = generateSequenceSteps(leadRow, templateKey, null);
     const insertSeq = db.prepare(
-      "INSERT INTO sequences (lead_id, template_key, template_label) VALUES (?, ?, ?)"
-    );
-    const seqInfo = insertSeq.run(leadId, templateKey, steps.length ? templateKeyLabel(templateKey) : templateKey);
+  "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
+);
+const seqInfo = insertSeq.run(tenantId, leadId, templateKey, steps.length ? templateKeyLabel(templateKey) : templateKey);
     const insertStep = db.prepare(
       "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
     );
