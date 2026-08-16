@@ -89,8 +89,8 @@ function addMinutes(dateTimeStr, minutes) {
   const newM = totalMinutes % 60;
   return `${datePart}T${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
 }
-function getRoster() {
-  const rows = db.prepare("SELECT * FROM instructors").all();
+function getRoster(tenantId) {
+  const rows = db.prepare("SELECT * FROM instructors WHERE tenant_id = ?").all(tenantId);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -98,13 +98,14 @@ function getRoster() {
     active: !!r.active,
   }));
 }
+}
 
-function getLoadByInstructor() {
+function getLoadByInstructor(tenantId) {
   const rows = db
     .prepare(
-      "SELECT assigned_instructor AS name, COUNT(*) AS n FROM leads WHERE pipeline_stage NOT IN ('Enrolled','Lost') GROUP BY assigned_instructor"
+      "SELECT assigned_instructor AS name, COUNT(*) AS n FROM leads WHERE tenant_id = ? AND pipeline_stage NOT IN ('Enrolled','Lost') GROUP BY assigned_instructor"
     )
-    .all();
+    .all(tenantId);
   const load = {};
   for (const r of rows) load[r.name] = r.n;
   return load;
