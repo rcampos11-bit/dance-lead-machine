@@ -197,11 +197,13 @@ router.post("/api/chat", async ({ req, res, body }) => {
     }
 
     const leadRow = {
-      name: tc.name,
-      recommendedProduct: cat.product,
-      assignedInstructor: instructor,
-      appointment: null,
-    };
+  name: tc.name,
+  email,
+  phone,
+  recommendedProduct: cat.product,
+  assignedInstructor: instructor,
+  appointment: null,
+};
 
     let notes = tc.notes || "";
     notes += timePreference
@@ -346,11 +348,13 @@ router.post("/api/sequences/simulate", async ({ res, body }) => {
   if (!leadRowRaw) return sendJson(res, 404, { error: "Lead not found" });
 
   const leadRow = {
-    name: leadRowRaw.name,
-    recommendedProduct: leadRowRaw.recommended_product,
-    assignedInstructor: leadRowRaw.assigned_instructor,
-    appointment: leadRowRaw.appointment_label,
-  };
+  name: leadRowRaw.name,
+  email: leadRowRaw.email,
+  phone: leadRowRaw.phone,
+  recommendedProduct: leadRowRaw.recommended_product,
+  assignedInstructor: leadRowRaw.assigned_instructor,
+  appointment: leadRowRaw.appointment_label,
+};
   const apptDate = leadRowRaw.appointment_date ? new Date(leadRowRaw.appointment_date) : null;
   const steps = generateSequenceSteps(leadRow, templateKey, apptDate);
   const insertSeq = db.prepare(
