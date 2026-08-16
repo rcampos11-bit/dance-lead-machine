@@ -42,60 +42,60 @@ function rowToCategory(r) {
 }
 
 // All categories (active + inactive), in display order.
-function getCategories(db) {
-  const rows = db.prepare("SELECT * FROM pricing_categories ORDER BY sort_order ASC, id ASC").all();
+function getCategories(db, tenantId) {
+  const rows = db.prepare("SELECT * FROM pricing_categories WHERE tenant_id = ? ORDER BY sort_order ASC, id ASC").all(tenantId);
   return rows.map(rowToCategory);
 }
 
-function getActiveCategories(db) {
-  return getCategories(db).filter((c) => c.active);
+function getActiveCategories(db, tenantId) {
+  return getCategories(db, tenantId).filter((c) => c.active);
 }
 
-function getCategoryMap(db) {
+function getCategoryMap(db, tenantId) {
   const map = {};
-  for (const c of getCategories(db)) map[c.key] = c;
+  for (const c of getCategories(db, tenantId)) map[c.key] = c;
   return map;
 }
 
 // Looks up a category by key; falls back to any active category
 // (e.g. if the AI or a stale client sends a key that no longer
 // exists because it was renamed/removed) rather than throwing.
-function getCategoryForKey(db, key) {
-  const map = getCategoryMap(db);
+function getCategoryForKey(db, tenantId, key) {
+  const map = getCategoryMap(db, tenantId);
   if (map[key]) return map[key];
-  const active = getActiveCategories(db);
+  const active = getActiveCategories(db, tenantId);
   return active[0] || null;
 }
 
-function keyTaken(db, key, ignoreId) {
-  const row = db.prepare("SELECT id FROM pricing_categories WHERE key = ?").get(key);
+function keyTaken(db, tenantId, key, ignoreId) {
+  const row = db.prepare("SELECT id FROM pricing_categories WHERE tenant_id = ? AND key = ?").get(tenantId, key);
   return !!row && row.id !== ignoreId;
 }
 
-function uniqueKey(db, desired, ignoreId) {
+function uniqueKey(db, tenantId, desired, ignoreId) {
   const base = slugify(desired);
   let candidate = base;
   let n = 2;
-  while (keyTaken(db, candidate, ignoreId)) {
+  while (keyTaken(db, tenantId, candidate, ignoreId)) {
     candidate = `${base}_${n++}`;
   }
   return candidate;
 }
 
-function addCategory(db, { key, label, product, revenue }) {
+function addCategory(db, tenantId, { key, label, product, revenue }) {
   const cleanLabel = (label || "").trim();
   if (!cleanLabel) throw new Error("label is required");
-  const finalKey = uniqueKey(db, key || cleanLabel);
-  const maxOrder = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM pricing_categories").get().m;
+  const finalKey = uniqueKey(db, tenantId, key || cleanLabel);
+  const maxOrder = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM pricing_categories WHERE tenant_id = ?").get(tenantId).m;
   const info = db
     .prepare(
-      "INSERT INTO pricing_categories (key, label, product, revenue, active, sort_order) VALUES (?, ?, ?, ?, 1, ?)"
+      "INSERT INTO pricing_categories (tenant_id, key, label, product, revenue, active, sort_order) VALUES (?, ?, ?, ?, ?, 1, ?)"
     )
-    .run(finalKey, cleanLabel, (product || cleanLabel).trim(), Number(revenue) || 0, maxOrder + 1);
+    .run(tenantId, finalKey, cleanLabel, (product || cleanLabel).trim(), Number(revenue) || 0, maxOrder + 1);
   return info.lastInsertRowid;
 }
 
-function updateCategory(db, id, fields) {
+function updateCategory(db, tenantId, id, fields) {
   const sets = [];
   const values = [];
   if (typeof fields.label === "string" && fields.label.trim()) {
@@ -115,13 +115,13 @@ function updateCategory(db, id, fields) {
     values.push(fields.active ? 1 : 0);
   }
   if (sets.length === 0) return false;
-  values.push(id);
-  db.prepare(`UPDATE pricing_categories SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  values.push(id, tenantId);
+  db.prepare(`UPDATE pricing_categories SET ${sets.join(", ")} WHERE id = ? AND tenant_id = ?`).run(...values);
   return true;
 }
 
-function deleteCategory(db, id) {
-  db.prepare("DELETE FROM pricing_categories WHERE id = ?").run(id);
+function deleteCategory(db, tenantId, id) {
+  db.prepare("DELETE FROM pricing_categories WHERE id = ? AND tenant_id = ?").run(id, tenantId);
 }
 
 module.exports = {
