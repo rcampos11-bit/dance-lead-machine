@@ -98,7 +98,6 @@ function getRoster(tenantId) {
     active: !!r.active,
   }));
 }
-}
 
 function getLoadByInstructor(tenantId) {
   const rows = db
