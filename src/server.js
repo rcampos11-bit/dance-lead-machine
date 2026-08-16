@@ -30,9 +30,6 @@ const ACCOUNT_TYPE = (process.env.ACCOUNT_TYPE || "studio").toLowerCase(); // "s
 const OWNER_NAME = process.env.OWNER_NAME || STUDIO_NAME;
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 
-const ADMIN_USER = process.env.ADMIN_USER || "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
-
 const db = openDb();
 const router = new Router();
 const staticHandler = serveStatic(PUBLIC_DIR);
@@ -53,15 +50,17 @@ function isAdminPath(pathname) {
 }
 
 function checkAdminAuth(req) {
-  if (!ADMIN_PASSWORD) return false;
   const header = req.headers["authorization"] || "";
-  if (!header.startsWith("Basic ")) return false;
+  if (!header.startsWith("Basic ")) return null;
   const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
   const idx = decoded.indexOf(":");
-  if (idx === -1) return false;
+  if (idx === -1) return null;
   const user = decoded.slice(0, idx);
   const pass = decoded.slice(idx + 1);
-  return user === ADMIN_USER && pass === ADMIN_PASSWORD;
+  const tenant = db
+    .prepare("SELECT * FROM tenants WHERE admin_user = ? AND admin_password = ?")
+    .get(user, pass);
+  return tenant || null;
 }
 
 // ---- helpers ----
@@ -550,14 +549,16 @@ const server = http.createServer(async (req, res) => {
   const pathname = decodeURIComponent(url.pathname);
 
   if (isAdminPath(pathname)) {
-    if (!checkAdminAuth(req)) {
-      res.writeHead(401, {
-        "content-type": "text/plain; charset=utf-8",
-        "www-authenticate": 'Basic realm="Studio Admin"',
-      });
-      return res.end("Authentication required");
-    }
+  const tenant = checkAdminAuth(req);
+  if (!tenant) {
+    res.writeHead(401, {
+      "content-type": "text/plain; charset=utf-8",
+      "www-authenticate": 'Basic realm="Studio Admin"',
+    });
+    return res.end("Authentication required");
   }
+  req.tenantId = tenant.id;
+}
 
   const handled = await router.handle(req, res);
   if (handled) return;
@@ -574,9 +575,7 @@ if (require.main === module) {
     if (!process.env.ANTHROPIC_API_KEY) {
       console.warn("WARNING: ANTHROPIC_API_KEY is not set. /api/chat will fail until it is.");
     }
-    if (!process.env.ADMIN_PASSWORD) {
-      console.warn("WARNING: ADMIN_PASSWORD is not set. /admin.html will be locked out entirely until it is.");
-    }
+    
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.SENDGRID_API_KEY) {
       console.warn("WARNING: Twilio and/or SendGrid are not fully configured. Scheduled sends will be checked but will fail until credentials are set.");
     }
