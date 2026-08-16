@@ -171,7 +171,8 @@ router.post("/api/chat", async ({ req, res, body }) => {
 
   if (aiResult.toolCall) {
     const tc = aiResult.toolCall;
-    const { email, phone } = extractContact(tc.contact || "");
+    const email = (tc.email || "").trim();
+const phone = (tc.phone || "").trim();
 
     // Pricing categories are now database-backed and admin-editable
     // (see src/pricing.js) instead of the old hardcoded CATEGORIES map
