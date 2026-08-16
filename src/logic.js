@@ -170,7 +170,15 @@ function generateSequenceSteps(lead, templateKey, apptDateObj, now = new Date())
   const today = new Date(now.getTime());
   today.setHours(0, 0, 0, 0);
 
+  const hasEmail = !!(lead.email && lead.email.trim());
+  const hasPhone = !!(lead.phone && lead.phone.trim());
+
   return tmpl.steps
+    .filter((s) => {
+      if (s.channel === "email") return hasEmail;
+      if (s.channel === "text") return hasPhone;
+      return true;
+    })
     .map((s) => {
       const date = addDays(anchor, s.offsetDays);
       date.setHours(0, 0, 0, 0);
