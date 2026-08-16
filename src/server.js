@@ -246,7 +246,7 @@ const info = insertLead.run(
     const insertSeq = db.prepare(
   "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
 );
-    const info = insertSeq.run(tenantId, leadId, templateKey, templateKeyLabel(templateKey));
+    const seqInfo = insertSeq.run(tenantId, leadId, templateKey, templateKeyLabel(templateKey));
     const insertStep = db.prepare(
       "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
     );
