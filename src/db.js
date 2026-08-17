@@ -13,12 +13,13 @@ function openDb() {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(`
     CREATE TABLE IF NOT EXISTS tenants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      admin_user TEXT NOT NULL DEFAULT 'admin',
-      admin_password TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  admin_user TEXT NOT NULL DEFAULT 'admin',
+  admin_password TEXT NOT NULL,
+  account_type TEXT NOT NULL DEFAULT 'studio',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
     CREATE TABLE IF NOT EXISTS instructors (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tenant_id INTEGER NOT NULL DEFAULT 1,
@@ -92,18 +93,29 @@ function openDb() {
       db.exec(`ALTER TABLE ${table} ADD COLUMN tenant_id INTEGER NOT NULL DEFAULT 1`);
     }
   }
-
+// Migration: add account_type to the tenants table for databases
+// that predate solo-instructor mode. Existing tenant rows default
+// to their current ACCOUNT_TYPE env var value so nothing changes
+// for them until they're switched in the database directly.
+const tenantCols = db.prepare("PRAGMA table_info(tenants)").all();
+if (!tenantCols.some((c) => c.name === "account_type")) {
+  db.exec("ALTER TABLE tenants ADD COLUMN account_type TEXT NOT NULL DEFAULT 'studio'");
+  db.prepare("UPDATE tenants SET account_type = ? WHERE id = 1").run(
+    (process.env.ACCOUNT_TYPE || "studio").toLowerCase()
+  );
+}
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
   const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
   if (tenantCount === 0) {
     db.prepare(
-      "INSERT INTO tenants (id, name, admin_user, admin_password) VALUES (1, ?, ?, ?)"
-    ).run(
-      process.env.STUDIO_NAME || "Dance Lead Machine Studio",
-      process.env.ADMIN_USER || "admin",
-      process.env.ADMIN_PASSWORD || ""
-    );
+  "INSERT INTO tenants (id, name, admin_user, admin_password, account_type) VALUES (1, ?, ?, ?, ?)"
+).run(
+  process.env.STUDIO_NAME || "Dance Lead Machine Studio",
+  process.env.ADMIN_USER || "admin",
+  process.env.ADMIN_PASSWORD || "",
+  (process.env.ACCOUNT_TYPE || "studio").toLowerCase()
+);
   }
 
   // Seed default instructors on first run — only for studio accounts.
