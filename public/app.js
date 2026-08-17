@@ -689,10 +689,26 @@ async function checkHealth() {
   }
 }
 
+// ---- account type / solo mode ----
+async function applyAccountType() {
+  try {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.accountType === "solo") {
+      document.getElementById("tabBtnTeam").style.display = "none";
+      document.getElementById("view-team").style.display = "none";
+    }
+  } catch {
+    // if this fails, just leave Studio Team visible — fail open, not closed
+  }
+}
+
 // ---- init ----
 newConversation();
 renderSequenceLibrary();
 populateSpecialtyChecks();
 checkHealth();
+applyAccountType();
 refreshLeads().then(() => Promise.all([refreshSequences(), refreshRoster()]));
 refreshPricing();
