@@ -384,8 +384,58 @@ function renderInstructorCard(inst, instLeads, booked, revenue) {
     </div>`;
   return card;
 }
+function renderSoloStats() {
+  document.getElementById("teamCount").textContent = allLeads.length ? 1 : 0;
+  document.getElementById("teamRosterCount").textContent = allLeads.length ? 1 : 0;
+
+  const totalRevenue = allLeads.reduce((sum, l) => sum + Number(l.potential_revenue || 0), 0);
+  const byCategory = {};
+  allLeads.forEach((l) => {
+    const key = l.dance_interest || "Uncategorized";
+    if (!byCategory[key]) byCategory[key] = { count: 0, revenue: 0 };
+    byCategory[key].count += 1;
+    byCategory[key].revenue += Number(l.potential_revenue || 0);
+  });
+
+  const el = document.getElementById("rosterList");
+  el.innerHTML = "";
+
+  const summary = document.createElement("div");
+  summary.className = "instructor-card";
+  const rows = Object.entries(byCategory)
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(
+      ([label, v]) =>
+        `<div class="ic-stats" style="justify-content:space-between;">
+          <span>${escapeHtml(label)}</span>
+          <span>${v.count} lead${v.count === 1 ? "" : "s"} · $${v.revenue.toLocaleString()}</span>
+        </div>`
+    )
+    .join("");
+  summary.innerHTML = `
+    <div class="ic-head">
+      <span class="ic-name">Your Leads</span>
+    </div>
+    <div class="ic-stats">
+      <div class="stat"><div class="num">${allLeads.length}</div><div class="lbl">Total Leads</div></div>
+      <div class="stat"><div class="num">$${totalRevenue.toLocaleString()}</div><div class="lbl">Potential</div></div>
+    </div>
+    ${rows || '<div class="empty">No leads yet.</div>'}`;
+  el.appendChild(summary);
+}
 
 async function refreshRoster() {
+  if (isSoloMode) {
+    renderSoloStats();
+    return;
+  }
+  ...
+async function refreshRoster() {
+  if (isSoloMode) {
+    renderSoloStats();
+    return;
+  }
+
   const res = await fetch("/api/instructors");
   roster = await res.json();
   document.getElementById("teamCount").textContent = roster.filter((i) => i.active).length;
@@ -690,21 +740,17 @@ async function checkHealth() {
 }
 
 // ---- account type / solo mode ----
+let isSoloMode = false;
+
 async function applyAccountType() {
   try {
     const res = await fetch("/api/me");
     if (!res.ok) return;
     const data = await res.json();
     if (data.accountType === "solo") {
-      const tabBtnTeam = document.getElementById("tabBtnTeam");
-      document.getElementById("view-team").style.display = "none";
-
-      const modeBadge = document.createElement("span");
-      modeBadge.textContent = "👤 Instructor";
-      modeBadge.style.cssText =
-        "padding:8px 16px;font-weight:600;color:#666;";
-      tabBtnTeam.parentElement.insertBefore(modeBadge, tabBtnTeam);
-      tabBtnTeam.style.display = "none";
+      isSoloMode = true;
+      const firstName = (data.studioName || "My").split(" ")[0];
+      document.getElementById("tabBtnTeam").textContent = `👤 ${firstName}'s Stats`;
     }
   } catch {
     // if this fails, just leave Studio Team visible — fail open, not closed
