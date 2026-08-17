@@ -696,8 +696,15 @@ async function applyAccountType() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.accountType === "solo") {
-      document.getElementById("tabBtnTeam").style.display = "none";
+      const tabBtnTeam = document.getElementById("tabBtnTeam");
       document.getElementById("view-team").style.display = "none";
+
+      const modeBadge = document.createElement("span");
+      modeBadge.textContent = "👤 Instructor";
+      modeBadge.style.cssText =
+        "padding:8px 16px;font-weight:600;color:#666;";
+      tabBtnTeam.parentElement.insertBefore(modeBadge, tabBtnTeam);
+      tabBtnTeam.style.display = "none";
     }
   } catch {
     // if this fails, just leave Studio Team visible — fail open, not closed
