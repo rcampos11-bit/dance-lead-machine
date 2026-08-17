@@ -43,6 +43,7 @@ function isAdminPath(pathname) {
     "/api/instructors",
     "/api/setmore",
     "/api/pricing",
+    "/api/me",
   ];
   return adminApiPrefixes.some(
     (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + ".")
@@ -485,7 +486,14 @@ router.get("/api/health", async ({ res }) => {
     time: new Date().toISOString(),
   });
 });
-
+router.get("/api/me", async ({ req, res }) => {
+  const tenant = db.prepare("SELECT id, name, account_type FROM tenants WHERE id = ?").get(req.tenantId);
+  if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
+  sendJson(res, 200, {
+    studioName: tenant.name,
+    accountType: tenant.account_type,
+  });
+});
 // ============================================================
 // Scheduler — the piece that actually sends what sequence_steps
 // only used to schedule. Runs on an interval inside this process;
