@@ -23,6 +23,7 @@ const {
   deleteCategory,
 } = require("./pricing");
 const { sendSms, sendEmail } = require("./notify");
+const { hashPassword, verifyPassword } = require("./auth");
 
 const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
@@ -58,10 +59,10 @@ function checkAdminAuth(req) {
   if (idx === -1) return null;
   const user = decoded.slice(0, idx);
   const pass = decoded.slice(idx + 1);
-  const tenant = db
-    .prepare("SELECT * FROM tenants WHERE admin_user = ? AND admin_password = ?")
-    .get(user, pass);
-  return tenant || null;
+  const tenant = db.prepare("SELECT * FROM tenants WHERE admin_user = ?").get(user);
+  if (!tenant) return null;
+  if (!verifyPassword(pass, tenant.admin_password)) return null;
+  return tenant;
 }
 
 // ---- helpers ----
@@ -484,12 +485,12 @@ router.post("/api/signup", async ({ res, body }) => {
 
   const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  const info = db
+    const info = db
     .prepare(
       `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at)
        VALUES (?, ?, ?, ?, 'trialing', ?)`
     )
-    .run(studioName, email, password, accountType, trialEndsAt);
+    .run(studioName, email, hashPassword(password), accountType, trialEndsAt);
 
   sendJson(res, 201, {
     ok: true,
