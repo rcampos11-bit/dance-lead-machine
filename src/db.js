@@ -5,6 +5,7 @@
 const { DatabaseSync } = require("node:sqlite");
 const path = require("node:path");
 const fs = require("node:fs");
+const { hashPassword, isHashed } = require("./auth");
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "data", "dance_lead_machine.db");
 function openDb() {
   const dir = path.dirname(DB_PATH);
@@ -121,16 +122,29 @@ addTenantCol("subscription_status", "subscription_status TEXT NOT NULL DEFAULT '
 addTenantCol("trial_ends_at", "trial_ends_at TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
-  const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
+    const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
   if (tenantCount === 0) {
     db.prepare(
   "INSERT INTO tenants (id, name, admin_user, admin_password, account_type) VALUES (1, ?, ?, ?, ?)"
 ).run(
   process.env.STUDIO_NAME || "Dance Lead Machine Studio",
   process.env.ADMIN_USER || "admin",
-  process.env.ADMIN_PASSWORD || "",
+  hashPassword(process.env.ADMIN_PASSWORD || ""),
   (process.env.ACCOUNT_TYPE || "studio").toLowerCase()
 );
+  }
+
+  // Migration: hash any legacy plain-text admin_password values
+  // already in the database. Existing credentials keep working —
+  // we hash the value that's already there, so logins are unaffected.
+  const allTenants = db.prepare("SELECT id, admin_password FROM tenants").all();
+  for (const t of allTenants) {
+    if (!isHashed(t.admin_password)) {
+      db.prepare("UPDATE tenants SET admin_password = ? WHERE id = ?").run(
+        hashPassword(t.admin_password),
+        t.id
+      );
+    }
   }
 
   // Seed default instructors on first run — only for studio accounts.
