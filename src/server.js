@@ -456,6 +456,50 @@ router.delete("/api/pricing/:id", async ({ req, res, params }) => {
 });
 
 // ============================================================
+// Signup — self-serve tenant creation. Public route (not admin-
+// gated). Square billing isn't wired in yet — this creates the
+// tenant and starts a 14-day trial; a follow-up piece will add
+// actual Square customer/subscription creation alongside this.
+// ============================================================
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+router.post("/api/signup", async ({ res, body }) => {
+  const studioName = (body.studioName || "").trim();
+  const email = (body.email || "").trim().toLowerCase();
+  const password = (body.password || "").toString();
+  const tier = (body.tier || "").trim().toLowerCase();
+
+  if (!studioName) return sendJson(res, 400, { error: "Studio/business name is required" });
+  if (!isValidEmail(email)) return sendJson(res, 400, { error: "A valid email is required" });
+  if (password.length < 8) return sendJson(res, 400, { error: "Password must be at least 8 characters" });
+
+  const tierMap = { instructor: "solo", studio: "studio" };
+  const accountType = tierMap[tier];
+  if (!accountType) return sendJson(res, 400, { error: "Choose a plan: Dance Instructor or Studio Owner" });
+
+  const existing = db.prepare("SELECT id FROM tenants WHERE admin_user = ?").get(email);
+  if (existing) return sendJson(res, 409, { error: "An account with that email already exists" });
+
+  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  const info = db
+    .prepare(
+      `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at)
+       VALUES (?, ?, ?, ?, 'trialing', ?)`
+    )
+    .run(studioName, email, password, accountType, trialEndsAt);
+
+  sendJson(res, 201, {
+    ok: true,
+    tenantId: info.lastInsertRowid,
+    accountType,
+    trialEndsAt,
+  });
+});
+
+// ============================================================
 // Setmore diagnostic — one-time use to discover staff/service keys
 // ============================================================
 router.get("/api/setmore/diagnostic", async ({ res }) => {
