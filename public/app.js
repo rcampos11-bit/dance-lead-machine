@@ -429,14 +429,8 @@ async function refreshRoster() {
     renderSoloStats();
     return;
   }
-  ...
-async function refreshRoster() {
-  if (isSoloMode) {
-    renderSoloStats();
-    return;
-  }
-
-  const res = await fetch("/api/instructors");
+  
+   const res = await fetch("/api/instructors");
   roster = await res.json();
   document.getElementById("teamCount").textContent = roster.filter((i) => i.active).length;
   document.getElementById("teamRosterCount").textContent = roster.length;
