@@ -745,6 +745,8 @@ async function applyAccountType() {
       isSoloMode = true;
       const firstName = (data.studioName || "My").split(" ")[0];
       document.getElementById("tabBtnTeam").textContent = `👤 ${firstName}'s Stats`;
+      const leftCol = document.getElementById("teamLeftCol");
+      if (leftCol) leftCol.style.display = "none";
     }
   } catch {
     // if this fails, just leave Studio Team visible — fail open, not closed
@@ -756,6 +758,10 @@ newConversation();
 renderSequenceLibrary();
 populateSpecialtyChecks();
 checkHealth();
-applyAccountType();
-refreshLeads().then(() => Promise.all([refreshSequences(), refreshRoster()]));
 refreshPricing();
+
+(async () => {
+  await applyAccountType();
+  await refreshLeads();
+  await Promise.all([refreshSequences(), refreshRoster()]);
+})();
