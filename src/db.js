@@ -104,6 +104,21 @@ if (!tenantCols.some((c) => c.name === "account_type")) {
     (process.env.ACCOUNT_TYPE || "studio").toLowerCase()
   );
 }
+
+// Migration: add billing/subscription columns to tenants for
+// self-serve signup + Square subscriptions. Existing tenants
+// (created manually before this) default to subscription_status
+// 'active' so nothing about their access changes.
+const tenantCols2 = db.prepare("PRAGMA table_info(tenants)").all();
+const addTenantCol = (name, ddl) => {
+  if (!tenantCols2.some((c) => c.name === name)) {
+    db.exec(`ALTER TABLE tenants ADD COLUMN ${ddl}`);
+  }
+};
+addTenantCol("square_customer_id", "square_customer_id TEXT");
+addTenantCol("square_subscription_id", "square_subscription_id TEXT");
+addTenantCol("subscription_status", "subscription_status TEXT NOT NULL DEFAULT 'active'");
+addTenantCol("trial_ends_at", "trial_ends_at TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
   const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
