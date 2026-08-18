@@ -742,11 +742,13 @@ async function applyAccountType() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.accountType === "solo") {
-            isSoloMode = true;
+                  isSoloMode = true;
       const firstName = (data.studioName || "My").split(" ")[0];
       document.getElementById("tabBtnTeam").innerHTML = `👤 ${escapeHtml(firstName)}'s Stats <span class="count-pill" id="teamCount">0</span>`;
       const leftCol = document.getElementById("teamLeftCol");
       if (leftCol) leftCol.style.display = "none";
+      const heading = document.getElementById("teamHeading");
+      if (heading) heading.innerHTML = `${escapeHtml(firstName)}'s Stats <span class="count-pill" id="teamRosterCount">0</span>`;
     }
   } catch {
     // if this fails, just leave Studio Team visible — fail open, not closed
