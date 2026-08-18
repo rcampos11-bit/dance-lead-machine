@@ -42,15 +42,15 @@
         <button class="reset" id="resetBtn" title="Start a new conversation">New Lead</button>
         <button id="sendBtn">Send</button>
       </div>
-    </div>
-
-          <div class="side">
-        <div class="card">
-          <h3 id="teamHeading">Studio Team <span class="count-pill" id="teamRosterCount">0</span></h3>
-          <p class="hint">Live workload, pulled straight from the real database.</p>
-          <div id="rosterList"></div>
         </div>
-      </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Captured Leads <span class="count-pill" id="leadCount">0</span></h3>
+        <p class="hint">Every finished conversation is saved to a real database — refresh the page and they're still here.</p>
+        <div class="lead-list" id="leadList">
+          <div class="empty">No leads captured yet — finish a conversation to see one appear here.</div>
+        </div>
         <button class="export-all" id="exportAllBtn">⬇ Download All as CSV (for Leads tab)</button>
       </div>
 
@@ -141,7 +141,7 @@
 
       <div class="side">
         <div class="card">
-          <h3>Studio Team <span class="count-pill" id="teamRosterCount">0</span></h3>
+          <h3 id="teamHeading">Studio Team <span class="count-pill" id="teamRosterCount">0</span></h3>
           <p class="hint">Live workload, pulled straight from the real database.</p>
           <div id="rosterList"></div>
         </div>
