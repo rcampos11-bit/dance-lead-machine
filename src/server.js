@@ -57,14 +57,13 @@ function checkAdminAuth(req) {
   const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
   const idx = decoded.indexOf(":");
   if (idx === -1) return null;
-  const user = decoded.slice(0, idx);
+  const user = decoded.slice(0, idx).trim().toLowerCase();
   const pass = decoded.slice(idx + 1);
   const tenant = db.prepare("SELECT * FROM tenants WHERE admin_user = ?").get(user);
   if (!tenant) return null;
   if (!verifyPassword(pass, tenant.admin_password)) return null;
   return tenant;
 }
-
 // ---- helpers ----
 function extractContact(text) {
   const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
