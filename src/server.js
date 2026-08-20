@@ -24,6 +24,7 @@ const {
 } = require("./pricing");
 const { sendSms, sendEmail } = require("./notify");
 const { hashPassword, verifyPassword } = require("./auth");
+const { createTrialSubscription } = require("./square");
 
 const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
@@ -470,10 +471,12 @@ router.post("/api/signup", async ({ res, body }) => {
   const email = (body.email || "").trim().toLowerCase();
   const password = (body.password || "").toString();
   const tier = (body.tier || "").trim().toLowerCase();
+  const cardToken = (body.cardToken || "").toString();
 
   if (!studioName) return sendJson(res, 400, { error: "Studio/business name is required" });
   if (!isValidEmail(email)) return sendJson(res, 400, { error: "A valid email is required" });
   if (password.length < 8) return sendJson(res, 400, { error: "Password must be at least 8 characters" });
+  if (!cardToken) return sendJson(res, 400, { error: "Card details are required to start your trial" });
 
   const tierMap = { instructor: "solo", studio: "studio" };
   const accountType = tierMap[tier];
@@ -482,14 +485,32 @@ router.post("/api/signup", async ({ res, body }) => {
   const existing = db.prepare("SELECT id FROM tenants WHERE admin_user = ?").get(email);
   if (existing) return sendJson(res, 409, { error: "An account with that email already exists" });
 
+  let squareIds;
+  try {
+    squareIds = await createTrialSubscription({ studioName, email, cardToken, tier });
+  } catch (err) {
+    console.warn("Square signup failed:", err.message);
+    return sendJson(res, 402, {
+      error: "We couldn't verify your card. Please check your details and try again.",
+    });
+  }
+
   const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    const info = db
+  const info = db
     .prepare(
-      `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at)
-       VALUES (?, ?, ?, ?, 'trialing', ?)`
+      `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at, square_customer_id, square_subscription_id)
+       VALUES (?, ?, ?, ?, 'trialing', ?, ?, ?)`
     )
-    .run(studioName, email, hashPassword(password), accountType, trialEndsAt);
+    .run(
+      studioName,
+      email,
+      hashPassword(password),
+      accountType,
+      trialEndsAt,
+      squareIds.squareCustomerId,
+      squareIds.squareSubscriptionId
+    );
 
   sendJson(res, 201, {
     ok: true,
