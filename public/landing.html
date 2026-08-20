@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dance Lead Machine — AI Receptionist for Dance Instructors &amp; Studios</title>
+<meta name="description" content="An AI receptionist that answers inquiries, qualifies leads, and books follow-ups for dance instructors and studios — 24/7, even while you're teaching.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-950: #10162590;
+    --navy-950-solid: #101625;
+    --navy-900: #19223a;
+    --navy-850: #1e2842;
+    --navy-800: #232f4d;
+    --gold-500: #d7a94b;
+    --gold-300: #ecc77e;
+    --gold-glow: rgba(215, 169, 75, 0.35);
+    --cream-100: #f5efe3;
+    --cream-muted: #b6bfd4;
+    --cream-faint: #7c86a0;
+    --line: rgba(215, 169, 75, 0.28);
+    --line-soft: rgba(245, 239, 227, 0.1);
+    --radius: 14px;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Work Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--navy-950-solid);
+    color: var(--cream-100);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--gold-glow); color: var(--cream-100); }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--gold-300);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--gold-500);
+    display: inline-block;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  em, .accent { font-style: italic; color: var(--gold-300); }
+
+  p { color: var(--cream-muted); margin: 0; }
+
+  /* ---------- NAV ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(16, 22, 37, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    color: var(--cream-100);
+  }
+  .wordmark em { font-style: italic; color: var(--gold-300); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 15px;
+  }
+  .nav-links a { text-decoration: none; color: var(--cream-muted); transition: color 0.2s; }
+  .nav-links a:hover { color: var(--cream-100); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    color: #201509;
+    box-shadow: 0 6px 24px -8px var(--gold-glow);
+  }
+  .btn-primary:hover { box-shadow: 0 10px 28px -6px var(--gold-glow); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--cream-100);
+    border-color: var(--line-soft);
+  }
+  .btn-ghost:hover { border-color: var(--gold-500); }
+  .btn-small { padding: 9px 18px; font-size: 14px; }
+  .btn-block { width: 100%; }
+
+  /* ---------- HERO ---------- */
+  section.hero {
+    padding: 96px 0 70px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .hero h1 {
+    font-size: clamp(38px, 5vw, 58px);
+    line-height: 1.05;
+    margin-bottom: 22px;
+  }
+  .hero p.lede {
+    font-size: 19px;
+    color: var(--cream-muted);
+    max-width: 46ch;
+    margin-bottom: 34px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .hero-note {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--cream-faint);
+    letter-spacing: 0.02em;
+  }
+
+  /* Slot-line hero visual */
+  .slot-visual {
+    background: var(--navy-900);
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    padding: 34px 28px 30px;
+    position: relative;
+  }
+  .slot-visual .tag {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    color: var(--cream-faint);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .chat-line {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 26px;
+  }
+  .bubble {
+    max-width: 80%;
+    padding: 11px 15px;
+    border-radius: 12px;
+    font-size: 14.5px;
+  }
+  .bubble.in {
+    align-self: flex-start;
+    background: var(--navy-850);
+    color: var(--cream-100);
+    border-bottom-left-radius: 3px;
+  }
+  .bubble.out {
+    align-self: flex-end;
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    color: #201509;
+    font-weight: 500;
+    border-bottom-right-radius: 3px;
+  }
+  .slot-track {
+    position: relative;
+    height: 64px;
+    margin-top: 6px;
+  }
+  .slot-track svg { width: 100%; height: 100%; overflow: visible; }
+  .slot-track .stop-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    fill: var(--cream-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .slot-line-path {
+    stroke: var(--gold-500);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 3 6;
+    stroke-linecap: round;
+  }
+  .slot-line-progress {
+    stroke: var(--gold-300);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-dasharray: 210;
+    stroke-dashoffset: 210;
+    animation: draw 2.4s 0.4s ease-out forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .slot-line-progress { animation: none; stroke-dashoffset: 0; }
+  }
+  .slot-dot { fill: var(--navy-900); stroke: var(--gold-500); stroke-width: 2; }
+  .slot-dot.filled { fill: var(--gold-300); stroke: var(--gold-300); }
+
+  /* ---------- PAIN ---------- */
+  section.pain {
+    padding: 90px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .pain-grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 64px;
+    align-items: start;
+  }
+  .pain h2 {
+    font-size: clamp(28px, 3.4vw, 38px);
+    line-height: 1.15;
+  }
+  .pain-copy p { font-size: 17px; color: var(--cream-muted); margin-bottom: 18px; }
+  .pain-copy p:last-child { margin-bottom: 0; }
+  .pain-copy strong { color: var(--cream-100); font-weight: 600; }
+
+  /* ---------- HOW IT WORKS ---------- */
+  section.how {
+    padding: 100px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .how-head { max-width: 640px; margin-bottom: 64px; }
+  .how-head h2 { font-size: clamp(28px, 3.4vw, 38px); margin-bottom: 14px; }
+  .how-head p { font-size: 17px; }
+
+  .slot-rail {
+    position: relative;
+    padding-top: 6px;
+  }
+  .slot-rail-line {
+    position: absolute;
+    top: 27px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, var(--gold-500) 40%, transparent 0%);
+    background-size: 14px 1px;
+    background-repeat: repeat-x;
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 18px;
+    position: relative;
+  }
+  .step { display: flex; flex-direction: column; gap: 16px; }
+  .step-marker {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--navy-900);
+    border: 1px solid var(--gold-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--gold-300);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .step h3 { font-size: 16.5px; font-weight: 600; font-family: var(--font-body); margin-bottom: 6px; }
+  .step p { font-size: 14.5px; color: var(--cream-faint); }
+
+  /* ---------- PRICING ---------- */
+  section.pricing {
+    padding: 100px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .pricing-head { max-width: 640px; margin-bottom: 54px; }
+  .pricing-head h2 { font-size: clamp(28px, 3.4vw, 38px); margin-bottom: 14px; }
+  .pricing-head p { font-size: 17px; }
+
+  .tiers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+  }
+  .tier {
+    background: var(--navy-900);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+  }
+  .tier.studio { border-color: var(--line); }
+  .tier-name { font-family: var(--font-display); font-size: 24px; margin-bottom: 4px; }
+  .tier-for { font-size: 14.5px; color: var(--cream-faint); margin-bottom: 22px; }
+  .tier-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 26px;
+    font-family: var(--font-mono);
+  }
+  .tier-price .amount { font-size: 40px; color: var(--cream-100); font-weight: 500; }
+  .tier-price .period { font-size: 15px; color: var(--cream-faint); }
+  .tier-features {
+    list-style: none;
+    margin: 0 0 30px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    flex-grow: 1;
+  }
+  .tier-features li {
+    font-size: 14.5px;
+    color: var(--cream-muted);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .tier-features li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold-500);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .tier-features li strong { color: var(--cream-100); font-weight: 600; }
+  .tier-trial {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--cream-faint);
+    text-align: center;
+    margin-top: 14px;
+  }
+
+  /* ---------- SIGNUP ---------- */
+  section.signup {
+    padding: 100px 0 120px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .signup-inner {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .signup-head { text-align: center; margin-bottom: 40px; }
+  .signup-head .eyebrow { justify-content: center; }
+  .signup-head .eyebrow::before { display: none; }
+  .signup-head h2 { font-size: clamp(28px, 3.4vw, 36px); margin-bottom: 12px; }
+  .signup-head p { font-size: 16px; }
+
+  form.signup-form {
+    background: var(--navy-900);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    padding: 36px;
+  }
+
+  .tier-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 26px;
+  }
+  .tier-toggle input { display: none; }
+  .tier-toggle label {
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: left;
+  }
+  .tier-toggle label .t-name { font-weight: 600; font-size: 14.5px; color: var(--cream-100); display: block; }
+  .tier-toggle label .t-price { font-family: var(--font-mono); font-size: 12.5px; color: var(--cream-faint); }
+  .tier-toggle input:checked + label {
+    border-color: var(--gold-500);
+    background: rgba(215, 169, 75, 0.08);
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--cream-faint);
+    margin-bottom: 7px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+  .field input {
+    width: 100%;
+    background: var(--navy-850);
+    border: 1px solid var(--line-soft);
+    border-radius: 9px;
+    padding: 12px 14px;
+    color: var(--cream-100);
+    font-family: var(--font-body);
+    font-size: 15px;
+  }
+  .field input::placeholder { color: var(--cream-faint); }
+  .field input:focus { border-color: var(--gold-500); outline: none; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .card-fieldset {
+    border: 1px solid var(--line-soft);
+    border-radius: 9px;
+    padding: 14px;
+    margin-bottom: 22px;
+  }
+  .card-fieldset .card-row { display: grid; grid-template-columns: 1fr 90px 70px; gap: 10px; margin-top: 10px; }
+  .card-fieldset input { border: none; background: transparent; padding: 6px 4px; }
+  .card-divider { height: 1px; background: var(--line-soft); margin-top: 4px; }
+
+  .signup-legal {
+    font-size: 12.5px;
+    color: var(--cream-faint);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .footer-brand { display: flex; flex-direction: column; gap: 4px; }
+  .footer-brand .wordmark { font-size: 17px; }
+  .footer-brand span { font-size: 13px; color: var(--cream-faint); }
+  .footer-links { display: flex; gap: 26px; font-size: 14px; }
+  .footer-links a { text-decoration: none; color: var(--cream-faint); }
+  .footer-links a:hover { color: var(--cream-100); }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 860px) {
+    .hero-grid, .pain-grid, .tiers { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: repeat(3, 1fr); row-gap: 40px; }
+    .slot-rail-line { display: none; }
+    .nav-links { display: none; }
+    .field-row { grid-template-columns: 1fr; }
+    .card-fieldset .card-row { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .steps { grid-template-columns: 1fr 1fr; }
+    .tier-toggle { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#" class="wordmark">Dance <em>Lead</em> Machine</a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#signup" class="btn btn-primary btn-small">Start Free Trial</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">AI receptionist for dance pros</p>
+        <h1>Never miss a<br><em>dance lead</em> again.</h1>
+        <p class="lede">An AI receptionist that answers inquiries, qualifies leads, and books follow-ups for your dance business — 24/7, even while you're teaching.</p>
+        <div class="hero-ctas">
+          <a href="#signup" class="btn btn-primary">Start Free Trial</a>
+          <a href="#how" class="btn btn-ghost">See how it works</a>
+        </div>
+        <p class="hero-note">14-day free trial · no charge until your trial ends</p>
+      </div>
+
+      <div class="slot-visual">
+        <p class="tag">Live conversation</p>
+        <div class="chat-line">
+          <div class="bubble in">Hi! Do you offer private lessons for beginners?</div>
+          <div class="bubble out">We'd love to help! Have you danced before, or would this be your first time?</div>
+        </div>
+        <div class="slot-track" aria-hidden="true">
+          <svg viewBox="0 0 500 64" preserveAspectRatio="none">
+            <line x1="14" y1="32" x2="486" y2="32" class="slot-line-path"></line>
+            <line x1="14" y1="32" x2="486" y2="32" class="slot-line-progress" pathLength="210"></line>
+            <circle cx="14" cy="32" r="6" class="slot-dot filled"></circle>
+            <circle cx="108" cy="32" r="6" class="slot-dot filled"></circle>
+            <circle cx="202" cy="32" r="6" class="slot-dot filled"></circle>
+            <circle cx="296" cy="32" r="6" class="slot-dot"></circle>
+            <circle cx="390" cy="32" r="6" class="slot-dot"></circle>
+            <circle cx="486" cy="32" r="6" class="slot-dot"></circle>
+            <text x="14" y="54" class="stop-label" text-anchor="start">Asked</text>
+            <text x="108" y="54" class="stop-label" text-anchor="middle">Qualified</text>
+            <text x="202" y="54" class="stop-label" text-anchor="middle">Collected</text>
+            <text x="296" y="54" class="stop-label" text-anchor="middle">Booked</text>
+            <text x="390" y="54" class="stop-label" text-anchor="middle">Routed</text>
+            <text x="486" y="54" class="stop-label" text-anchor="end">Notified</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAIN -->
+  <section class="pain">
+    <div class="wrap pain-grid">
+      <div>
+        <p class="eyebrow">The problem</p>
+        <h2>You're teaching.<br>Your phone is buzzing.</h2>
+      </div>
+      <div class="pain-copy">
+        <p>Every missed text is a lead who found someone else. Between classes, private lessons, and rehearsals, there's no time to answer every inquiry the moment it comes in — and by the time you call back, they've already booked with another studio.</p>
+        <p>We built Dance Lead Machine because <strong>we needed it ourselves</strong>. Now it answers instantly, asks the right questions, and gets every lead ready to book — so nothing falls through the cracks, even on your busiest teaching days.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="how-head">
+        <p class="eyebrow">How it works</p>
+        <h2>From first message to booked lesson</h2>
+        <p>Six steps, run automatically for every single inquiry — like a dance floor's slot, each lead moves the same path from start to finish.</p>
+      </div>
+
+      <div class="slot-rail">
+        <div class="slot-rail-line" aria-hidden="true"></div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <h3>Understands</h3>
+            <p>Reads every inquiry and figures out what kind of dancer is reaching out.</p>
+          </div>
+          <div class="step">
+            <div class="step-marker">2</div>
+            <h3>Asks</h3>
+            <p>One smart follow-up question, in natural conversation — not a form.</p>
+          </div>
+          <div class="step">
+            <div class="step-marker">3</div>
+            <h3>Collects</h3>
+            <p>Name, phone, email, and best time to reach them.</p>
+          </div>
+          <div class="step">
+            <div class="step-marker">4</div>
+            <h3>Books</h3>
+            <p>Locks in a time to talk, or notes when they're not ready yet.</p>
+          </div>
+          <div class="step">
+            <div class="step-marker">5</div>
+            <h3>Distributes</h3>
+            <p>Routes the lead to the right instructor automatically.</p>
+          </div>
+          <div class="step">
+            <div class="step-marker">6</div>
+            <h3>Follows up</h3>
+            <p>Scheduled reminders so warm leads never go cold.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="pricing">
+    <div class="wrap">
+      <div class="pricing-head">
+        <p class="eyebrow">Pricing</p>
+        <h2>Simple pricing, real value</h2>
+        <p>Every plan includes a full 14-day free trial. No charge until your trial ends.</p>
+      </div>
+
+      <div class="tiers">
+        <div class="tier">
+          <p class="tier-name">Dance Instructor</p>
+          <p class="tier-for">For independent instructors renting studio space</p>
+          <div class="tier-price"><span class="amount">$29</span><span class="period">/ month</span></div>
+          <ul class="tier-features">
+            <li><strong>24/7 AI receptionist</strong> — every inquiry gets an instant, natural reply, even at 11pm or mid-lesson</li>
+            <li><strong>Smart qualifying questions</strong> — wedding dance? beginner? private lessons? — so you know exactly what a lead wants before you call back</li>
+            <li><strong>Automatic contact capture</strong> — name, phone, email, and best time to reach them, saved and ready</li>
+            <li><strong>Personal dashboard</strong> — every lead, your total pipeline value, and a breakdown by lesson type at a glance</li>
+            <li><strong>Automated follow-up</strong> — leads who go quiet get a scheduled nudge by text or email</li>
+          </ul>
+          <a href="#signup" class="btn btn-ghost btn-block" data-tier="instructor">Choose Dance Instructor</a>
+          <p class="tier-trial">14-day free trial · cancel anytime</p>
+        </div>
+
+        <div class="tier studio">
+          <p class="tier-name">Studio Owner</p>
+          <p class="tier-for">For studios with a team of instructors</p>
+          <div class="tier-price"><span class="amount">$99</span><span class="period">/ month</span></div>
+          <ul class="tier-features">
+            <li><strong>Everything in Dance Instructor</strong>, plus:</li>
+            <li><strong>Full team roster</strong> — add every instructor and tag their specialties (wedding, competitive, kids, and more)</li>
+            <li><strong>Smart lead distribution</strong> — new leads route automatically to the least-busy instructor who matches what they're looking for</li>
+            <li><strong>Studio-wide visibility</strong> — see workload and lead volume across your whole team, not just one calendar</li>
+            <li><strong>Toggle instructors on/off</strong> — pause routing to anyone who's out, without losing their existing leads</li>
+          </ul>
+          <a href="#signup" class="btn btn-primary btn-block" data-tier="studio">Choose Studio Owner</a>
+          <p class="tier-trial">14-day free trial · cancel anytime</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIGNUP -->
+  <section class="signup" id="signup">
+    <div class="wrap signup-inner">
+      <div class="signup-head">
+        <p class="eyebrow">Get started</p>
+        <h2>Start your free trial</h2>
+        <p>No charge today. Cancel anytime before your trial ends.</p>
+      </div>
+
+      <form class="signup-form" id="signupForm">
+        <div class="tier-toggle" role="radiogroup" aria-label="Choose a plan">
+          <input type="radio" name="tier" id="tier-instructor" value="instructor" checked>
+          <label for="tier-instructor">
+            <span class="t-name">Dance Instructor</span>
+            <span class="t-price">$29/mo</span>
+          </label>
+          <input type="radio" name="tier" id="tier-studio" value="studio">
+          <label for="tier-studio">
+            <span class="t-name">Studio Owner</span>
+            <span class="t-price">$99/mo</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="studioName">Studio / business name</label>
+          <input type="text" id="studioName" name="studioName" placeholder="e.g. West Coast Swing Academy" required>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@yourdomain.com" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Create a password" required>
+        </div>
+
+        <div class="card-fieldset">
+          <label style="display:block; font-size:13px; color:var(--cream-faint); font-family:var(--font-mono); margin-bottom:8px;">Card details</label>
+          <div id="square-card-container"></div>
+        </div>
+        <p id="cardErrorMsg" style="display:none; color:#e08a8a; font-size:13px; margin-top:8px;"></p>
+
+        <button type="submit" class="btn btn-primary btn-block">Start Free Trial</button>
+        <p class="signup-legal">Payments securely processed by Square. By starting your trial you agree to our Terms of Service and Privacy Policy.</p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <a href="#" class="wordmark">Dance <em>Lead</em> Machine</a>
+      <span>Built by dance instructors, for dance instructors.</span>
+    </div>
+    <div class="footer-links">
+      <a href="#">Contact</a>
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+<script>
+  // Pre-select tier in the signup form when a pricing card's CTA is clicked
+  document.querySelectorAll('[data-tier]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var tier = el.getAttribute('data-tier');
+      var radio = document.getElementById('tier-' + tier);
+      if (radio) radio.checked = true;
+    });
+  });
+
+  // ----------------------------------------------------------
+  // Signup form — calls the real /api/signup endpoint.
+  // Card details are collected via Square's Web Payments SDK,
+  // which renders a secure, PCI-compliant card form directly
+  // from Square (the raw card number never touches our server
+  // or even this page's own JS — only a one-time token does).
+  // Currently pointed at Square SANDBOX — swap the <script> tag
+  // above and these IDs to production values before launch.
+  // ----------------------------------------------------------
+  var API_BASE = 'https://dance-lead-machine-cwcsd.onrender.com';
+  var SQUARE_APP_ID = 'sandbox-sq0idb-KZZcteY39OUAIwvfP_XJEA';
+  var SQUARE_LOCATION_ID = 'LPHP6T9VE9MNZ';
+
+  var form = document.getElementById('signupForm');
+  var submitBtn = form.querySelector('button[type="submit"]');
+  var submitBtnDefaultText = submitBtn.textContent;
+  var cardErrorMsg = document.getElementById('cardErrorMsg');
+  var squareCard = null;
+
+  async function initSquareCard() {
+    try {
+      var payments = Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
+      squareCard = await payments.card();
+      await squareCard.attach('#square-card-container');
+    } catch (err) {
+      cardErrorMsg.textContent = 'Payment form failed to load. Please refresh the page.';
+      cardErrorMsg.style.display = 'block';
+    }
+  }
+  initSquareCard();
+
+  function showFormMessage(text, isError) {
+    var existing = form.querySelector('.form-message');
+    if (existing) existing.remove();
+    var msg = document.createElement('p');
+    msg.className = 'form-message';
+    msg.textContent = text;
+    msg.style.marginTop = '14px';
+    msg.style.fontSize = '13.5px';
+    msg.style.textAlign = 'center';
+    msg.style.color = isError ? '#e08a8a' : 'var(--gold-300)';
+    form.appendChild(msg);
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    cardErrorMsg.style.display = 'none';
+
+    var studioName = document.getElementById('studioName').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var tier = form.querySelector('input[name="tier"]:checked').value;
+
+    if (!studioName || !email || !password) {
+      showFormMessage('Please fill in every field.', true);
+      return;
+    }
+    if (password.length < 8) {
+      showFormMessage('Password must be at least 8 characters.', true);
+      return;
+    }
+    if (!squareCard) {
+      showFormMessage('Payment form is still loading — please wait a moment and try again.', true);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Verifying card…';
+
+    var tokenResult;
+    try {
+      tokenResult = await squareCard.tokenize();
+    } catch (err) {
+      showFormMessage('Something went wrong verifying your card. Please try again.', true);
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtnDefaultText;
+      return;
+    }
+
+    if (tokenResult.status !== 'OK') {
+      var detail =
+        tokenResult.errors && tokenResult.errors[0] && tokenResult.errors[0].message
+          ? tokenResult.errors[0].message
+          : 'Please check your card details and try again.';
+      cardErrorMsg.textContent = detail;
+      cardErrorMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtnDefaultText;
+      return;
+    }
+
+    submitBtn.textContent = 'Starting your trial…';
+
+    try {
+      var res = await fetch(API_BASE + '/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studioName: studioName,
+          email: email,
+          password: password,
+          tier: tier,
+          cardToken: tokenResult.token,
+        }),
+      });
+      var data = await res.json();
+
+      if (!res.ok) {
+        showFormMessage(data.error || 'Something went wrong. Please try again.', true);
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtnDefaultText;
+        return;
+      }
+
+      form.innerHTML =
+        '<h3 style="font-family: var(--font-display); font-size: 22px; font-weight: 500; margin-bottom: 10px;">You\'re in! 🎉</h3>' +
+        '<p style="color: var(--cream-muted); font-size: 15px; line-height: 1.6;">' +
+        'Your 14-day free trial has started. Log in anytime at ' +
+        '<a href="' + API_BASE + '/admin.html" style="color: var(--gold-300);">your dashboard</a> ' +
+        'with the email and password you just created.</p>';
+    } catch (err) {
+      showFormMessage('Couldn\'t reach the server. Please try again in a moment.', true);
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtnDefaultText;
+    }
+  });
+</script>
+
+</body>
+</html>
