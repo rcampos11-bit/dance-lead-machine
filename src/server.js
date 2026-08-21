@@ -612,6 +612,90 @@ router.post("/api/sequences/process-due", async ({ res }) => {
 });
 
 
+// ============================================================
+// Square webhook — handled here directly (not via router) since
+// signature verification needs the exact raw request bytes, and
+// the router's JSON parser would consume/transform them first.
+// ============================================================
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => resolve(raw));
+    req.on("error", reject);
+  });
+}
+
+function verifySquareSignature(rawBody, signatureHeader, notificationUrl) {
+  const key = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+  if (!key || !signatureHeader) return false;
+  const hmac = crypto.createHmac("sha256", key);
+  hmac.update(notificationUrl + rawBody);
+  const expected = hmac.digest("base64");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signatureHeader);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function handleSquareWebhook(req, res) {
+  const rawBody = await readRawBody(req);
+  const signature = req.headers["x-square-hmacsha256-signature"];
+  const notificationUrl = `https://${req.headers.host}/api/webhooks/square`;
+
+  if (!verifySquareSignature(rawBody, signature, notificationUrl)) {
+    console.warn("Square webhook: signature verification failed");
+    res.writeHead(401);
+    return res.end();
+  }
+
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch (e) {
+    res.writeHead(400);
+    return res.end();
+  }
+
+  try {
+    const type = event.type;
+    const data = event.data && event.data.object;
+
+    if (type === "subscription.created" || type === "subscription.updated") {
+      const sub = data && data.subscription;
+      if (sub && sub.id) {
+        let status = "trialing";
+        if (sub.status === "ACTIVE") status = "active";
+        else if (sub.status === "CANCELED") status = "canceled";
+        else if (sub.status === "PAUSED") status = "paused";
+        db.prepare("UPDATE tenants SET subscription_status = ? WHERE square_subscription_id = ?").run(
+          status,
+          sub.id
+        );
+      }
+    } else if (type === "invoice.payment_made") {
+      const invoice = data && data.invoice;
+      if (invoice && invoice.subscription_id) {
+        db.prepare("UPDATE tenants SET subscription_status = 'active' WHERE square_subscription_id = ?").run(
+          invoice.subscription_id
+        );
+      }
+    } else if (type === "invoice.scheduled_charge_failed") {
+      const invoice = data && data.invoice;
+      if (invoice && invoice.subscription_id) {
+        db.prepare("UPDATE tenants SET subscription_status = 'past_due' WHERE square_subscription_id = ?").run(
+          invoice.subscription_id
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("Square webhook handling error:", err.message);
+  }
+
+  res.writeHead(200);
+  res.end();
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -624,6 +708,10 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  if (req.method === "POST" && pathname === "/api/webhooks/square") {
+    return handleSquareWebhook(req, res);
+  }
 
   if (isAdminPath(pathname)) {
   const tenant = checkAdminAuth(req);
