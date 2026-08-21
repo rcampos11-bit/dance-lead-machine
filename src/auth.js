@@ -34,4 +34,8 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(candidate, hash);
 }
 
-module.exports = { hashPassword, verifyPassword, isHashed };
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+module.exports = { hashPassword, verifyPassword, isHashed, hashResetToken };
