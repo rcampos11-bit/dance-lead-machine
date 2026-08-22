@@ -24,6 +24,7 @@ const {
 } = require("./pricing");
 const { sendSms, sendEmail } = require("./notify");
 const { hashPassword, verifyPassword, hashResetToken } = require("./auth");
+const { getOfferTemplates, getOfferByKey } = require("./onboarding");
 const { createTrialSubscription } = require("./square");
 
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ const staticHandler = serveStatic(PUBLIC_DIR);
 // ---- admin auth helpers ----
 function isAdminPath(pathname) {
   if (pathname === "/admin.html") return true;
+  if (pathname === "/onboarding.html") return true;
   const adminApiPrefixes = [
     "/api/leads",
     "/api/sequences",
@@ -46,6 +48,7 @@ function isAdminPath(pathname) {
     "/api/setmore",
     "/api/pricing",
     "/api/me",
+    "/api/onboarding",
   ];
   return adminApiPrefixes.some(
     (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + ".")
@@ -627,6 +630,25 @@ router.get("/api/me", async ({ req, res }) => {
     studioName: tenant.name,
     accountType: tenant.account_type,
   });
+});
+
+router.get("/api/onboarding/status", async ({ req, res }) => {
+  const tenant = db.prepare("SELECT onboarding_completed, chosen_offer_key FROM tenants WHERE id = ?").get(req.tenantId);
+  if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
+  sendJson(res, 200, {
+    onboardingCompleted: !!tenant.onboarding_completed,
+    chosenOfferKey: tenant.chosen_offer_key,
+    offers: getOfferTemplates(),
+  });
+});
+
+router.post("/api/onboarding/offer", async ({ req, res, body }) => {
+  const key = (body.offerKey || "").trim();
+  const offer = getOfferByKey(key);
+  if (!offer) return sendJson(res, 400, { error: "Choose a valid offer" });
+
+  db.prepare("UPDATE tenants SET chosen_offer_key = ? WHERE id = ?").run(key, req.tenantId);
+  sendJson(res, 200, { ok: true, offer });
 });
 // ============================================================
 // Scheduler — the piece that actually sends what sequence_steps
