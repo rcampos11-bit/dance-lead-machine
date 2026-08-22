@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Started | Dance Lead Machine</title>
+<style>
+  :root {
+    --navy: #0b1224;
+    --navy-light: #131b33;
+    --gold: #d4af37;
+    --gold-light: #e8c866;
+    --text: #f5f0e6;
+    --text-dim: #a8a8b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Work Sans', -apple-system, sans-serif;
+    background: linear-gradient(135deg, var(--navy) 0%, #060a16 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  .progress {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .progress .step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(212,175,55,0.2);
+  }
+  .progress .step.active { background: var(--gold); }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+  }
+  p.sub {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .offers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .offer-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .offer-card:hover { border-color: rgba(212,175,55,0.5); }
+  .offer-card.selected {
+    border-color: var(--gold);
+    background: rgba(212,175,55,0.08);
+  }
+  .offer-card h3 {
+    font-size: 16px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+  }
+  .offer-card p {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  button {
+    padding: 13px 28px;
+    background: var(--gold);
+    color: #0b1224;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: var(--gold-light); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .msg {
+    margin-top: 16px;
+    font-size: 14px;
+    color: #f0a0a0;
+    display: none;
+  }
+  .msg.show { display: block; }
+  .loading {
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="progress">
+      <div class="step active"></div>
+      <div class="step"></div>
+      <div class="step"></div>
+      <div class="step"></div>
+    </div>
+    <h1>Let's get your first leads</h1>
+    <p class="sub">Pick one offer to promote. Keep it simple — the easier it is to say yes to, the more leads you'll get. You can always add more offers later.</p>
+
+    <div id="loading" class="loading">Loading offers...</div>
+    <div id="offers" class="offers" style="display:none;"></div>
+    <button id="continueBtn" disabled>Continue</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    let selectedKey = null;
+
+    async function loadOffers() {
+      try {
+        const res = await fetch('/api/onboarding/status');
+        const data = await res.json();
+
+        document.getElementById('loading').style.display = 'none';
+        const container = document.getElementById('offers');
+        container.style.display = 'grid';
+
+        data.offers.forEach((offer) => {
+          const card = document.createElement('div');
+          card.className = 'offer-card';
+          card.dataset.key = offer.key;
+          card.innerHTML = `<h3>${offer.label}</h3><p>${offer.description}</p>`;
+          card.addEventListener('click', () => selectOffer(offer.key));
+          container.appendChild(card);
+        });
+
+        if (data.chosenOfferKey) {
+          selectOffer(data.chosenOfferKey);
+        }
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Could not load offers. Refresh to try again.';
+      }
+    }
+
+    function selectOffer(key) {
+      selectedKey = key;
+      document.querySelectorAll('.offer-card').forEach((el) => {
+        el.classList.toggle('selected', el.dataset.key === key);
+      });
+      document.getElementById('continueBtn').disabled = false;
+    }
+
+    document.getElementById('continueBtn').addEventListener('click', async () => {
+      if (!selectedKey) return;
+      const btn = document.getElementById('continueBtn');
+      const msg = document.getElementById('msg');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      msg.className = 'msg';
+
+      try {
+        const res = await fetch('/api/onboarding/offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offerKey: selectedKey }),
+        });
+        if (!res.ok) throw new Error('Save failed');
+
+        // Step 2 (QR code / lead link) isn't built yet —
+        // land back in the dashboard for now.
+        window.location.href = '/admin.html';
+      } catch (err) {
+        msg.className = 'msg show';
+        msg.textContent = 'Something went wrong saving your offer. Please try again.';
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+      }
+    });
+
+    loadOffers();
+  </script>
+</body>
+</html>
