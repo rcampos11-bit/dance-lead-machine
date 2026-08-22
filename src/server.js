@@ -533,8 +533,9 @@ router.post("/api/forgot-password", async ({ req, res, body }) => {
     return sendJson(res, 200, { ok: true, message: genericMsg });
   }
 
-  const tenant = db.prepare("SELECT id, name FROM tenants WHERE admin_user = ?").get(email);
+    const tenant = db.prepare("SELECT id, name FROM tenants WHERE admin_user = ?").get(email);
   if (tenant) {
+    console.log(`Password reset requested for tenant ${tenant.id} (${email}) — tenant found, sending email.`);
     const token = crypto.randomBytes(32).toString("hex");
     const tokenHash = hashResetToken(token);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -551,11 +552,14 @@ router.post("/api/forgot-password", async ({ req, res, body }) => {
         subject: `Reset your ${STUDIO_NAME} password`,
         body: `Hi ${tenant.name},\n\nWe received a request to reset your password. Click the link below to set a new one — this link expires in 1 hour:\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
       });
+      console.log(`Password reset email sent successfully to ${email}.`);
     } catch (err) {
-      console.warn("Password reset email failed:", err.message);
+      console.warn(`Password reset email FAILED for ${email}:`, err.message);
       // Still return the generic success message — don't leak
       // whether the send failed, and don't block the response on it.
     }
+  } else {
+    console.log(`Password reset requested for ${email} — no matching tenant found, no email sent.`);
   }
 
   sendJson(res, 200, { ok: true, message: genericMsg });
