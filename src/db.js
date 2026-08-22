@@ -122,6 +122,8 @@ addTenantCol("subscription_status", "subscription_status TEXT NOT NULL DEFAULT '
 addTenantCol("trial_ends_at", "trial_ends_at TEXT");
 addTenantCol("reset_token_hash", "reset_token_hash TEXT");
 addTenantCol("reset_token_expires_at", "reset_token_expires_at TEXT");
+addTenantCol("onboarding_completed", "onboarding_completed INTEGER NOT NULL DEFAULT 0");
+addTenantCol("chosen_offer_key", "chosen_offer_key TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
