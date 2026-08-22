@@ -23,7 +23,7 @@ const {
   deleteCategory,
 } = require("./pricing");
 const { sendSms, sendEmail } = require("./notify");
-const { hashPassword, verifyPassword } = require("./auth");
+const { hashPassword, verifyPassword, hashResetToken } = require("./auth");
 const { createTrialSubscription } = require("./square");
 
 const PORT = process.env.PORT || 3000;
@@ -518,6 +518,71 @@ router.post("/api/signup", async ({ res, body }) => {
     accountType,
     trialEndsAt,
   });
+});
+
+// ============================================================
+// Forgot / reset password
+// ============================================================
+router.post("/api/forgot-password", async ({ req, res, body }) => {
+  const email = (body.email || "").trim().toLowerCase();
+  const genericMsg = "If an account exists for that email, we've sent a password reset link.";
+
+  if (!isValidEmail(email)) {
+    // Still generic — don't reveal whether the address is even
+    // well-formed-but-unregistered vs malformed.
+    return sendJson(res, 200, { ok: true, message: genericMsg });
+  }
+
+  const tenant = db.prepare("SELECT id, name FROM tenants WHERE admin_user = ?").get(email);
+  if (tenant) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = hashResetToken(token);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    db.prepare("UPDATE tenants SET reset_token_hash = ?, reset_token_expires_at = ? WHERE id = ?").run(
+      tokenHash,
+      expiresAt,
+      tenant.id
+    );
+
+    const resetUrl = `https://${req.headers.host}/reset-password.html?token=${token}`;
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Reset your ${STUDIO_NAME} password`,
+        body: `Hi ${tenant.name},\n\nWe received a request to reset your password. Click the link below to set a new one — this link expires in 1 hour:\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
+      });
+    } catch (err) {
+      console.warn("Password reset email failed:", err.message);
+      // Still return the generic success message — don't leak
+      // whether the send failed, and don't block the response on it.
+    }
+  }
+
+  sendJson(res, 200, { ok: true, message: genericMsg });
+});
+
+router.post("/api/reset-password", async ({ res, body }) => {
+  const token = (body.token || "").toString();
+  const password = (body.password || "").toString();
+
+  if (!token) return sendJson(res, 400, { error: "Missing reset token" });
+  if (password.length < 8) return sendJson(res, 400, { error: "Password must be at least 8 characters" });
+
+  const tokenHash = hashResetToken(token);
+  const tenant = db
+    .prepare("SELECT id, reset_token_expires_at FROM tenants WHERE reset_token_hash = ?")
+    .get(tokenHash);
+
+  if (!tenant || !tenant.reset_token_expires_at || new Date(tenant.reset_token_expires_at) < new Date()) {
+    return sendJson(res, 400, { error: "This reset link is invalid or has expired." });
+  }
+
+  db.prepare("UPDATE tenants SET admin_password = ?, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = ?").run(
+    hashPassword(password),
+    tenant.id
+  );
+
+  sendJson(res, 200, { ok: true });
 });
 
 // ============================================================
