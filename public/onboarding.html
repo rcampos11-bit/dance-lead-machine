@@ -137,7 +137,7 @@
           const card = document.createElement('div');
           card.className = 'offer-card';
           card.dataset.key = offer.key;
-          card.innerHTML = `<h3>${offer.label}</h3><p>${offer.description}</p>`;
+          card.innerHTML = `<h3>${offer.label}</h3><p>${offer.description}</p><p style="margin-top:8px;color:var(--gold-light);font-size:12.5px;font-weight:600;">${offer.value}</p>`;
           card.addEventListener('click', () => selectOffer(offer.key));
           container.appendChild(card);
         });
