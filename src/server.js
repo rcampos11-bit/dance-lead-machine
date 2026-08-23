@@ -9,7 +9,7 @@ const { URL } = require("node:url");
 
 const { Router, sendJson, sendText, serveStatic } = require("./router");
 const { openDb } = require("./db");
-const { getReceptionistReply } = require("./ai");
+const { getReceptionistReply, generateSocialCaptions } = require("./ai");
 const {
   generateSlots,
   pickInstructor,
@@ -650,6 +650,28 @@ router.post("/api/onboarding/offer", async ({ req, res, body }) => {
   db.prepare("UPDATE tenants SET chosen_offer_key = ? WHERE id = ?").run(key, req.tenantId);
   sendJson(res, 200, { ok: true, offer });
 });
+router.post("/api/onboarding/captions", async ({ req, res }) => {
+  const tenant = db.prepare("SELECT name, chosen_offer_key FROM tenants WHERE id = ?").get(req.tenantId);
+  if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
+  if (!tenant.chosen_offer_key) {
+    return sendJson(res, 400, { error: "Pick an offer first before generating captions." });
+  }
+
+  const offer = getOfferByKey(tenant.chosen_offer_key);
+  if (!offer) return sendJson(res, 400, { error: "Your chosen offer is no longer valid. Please pick again." });
+
+  try {
+    const captions = await generateSocialCaptions({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      studioName: tenant.name,
+      offer,
+    });
+    sendJson(res, 200, { ok: true, captions });
+  } catch (err) {
+    sendJson(res, 502, { error: err.message });
+  }
+});
+
 // ============================================================
 // Scheduler — the piece that actually sends what sequence_steps
 // only used to schedule. Runs on an interval inside this process;
