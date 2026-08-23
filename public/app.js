@@ -755,14 +755,33 @@ async function applyAccountType() {
   }
 }
 
-// ---- init ----
-newConversation();
-renderSequenceLibrary();
-populateSpecialtyChecks();
-checkHealth();
-refreshPricing();
+// ---- onboarding redirect check ----
+async function checkOnboarding() {
+  try {
+    const res = await fetch("/api/onboarding/status");
+    if (!res.ok) return true; // fail open — don't block the dashboard on a broken check
+    const data = await res.json();
+    if (!data.onboardingCompleted) {
+      window.location.href = "/onboarding.html";
+      return false;
+    }
+  } catch {
+    // fail open — if the check itself fails, don't lock the user out
+  }
+  return true;
+}
 
+// ---- init ----
 (async () => {
+  const shouldContinue = await checkOnboarding();
+  if (!shouldContinue) return;
+
+  newConversation();
+  renderSequenceLibrary();
+  populateSpecialtyChecks();
+  checkHealth();
+  refreshPricing();
+
   await applyAccountType();
   await refreshLeads();
   await Promise.all([refreshSequences(), refreshRoster()]);
