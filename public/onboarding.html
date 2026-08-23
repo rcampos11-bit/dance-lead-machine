@@ -154,6 +154,29 @@
     display: none;
   }
   .copied-msg.show { display: inline; }
+  .caption-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+    position: relative;
+  }
+  .caption-copy-btn {
+    padding: 7px 14px;
+    font-size: 12.5px;
+    margin-top: 12px;
+  }
+  .caption-copied {
+    font-size: 12.5px;
+    color: var(--gold-light);
+    margin-left: 10px;
+    display: none;
+  }
+  .caption-copied.show { display: inline; }
 </style>
 </head>
 <body>
@@ -161,7 +184,7 @@
     <div class="progress">
       <div class="step active" id="progressStep1"></div>
       <div class="step" id="progressStep2"></div>
-      <div class="step"></div>
+      <div class="step" id="progressStep3"></div>
       <div class="step"></div>
     </div>
 
@@ -190,6 +213,19 @@
 
       <button id="downloadQrBtn">Download QR Code</button>
       <button id="continueBtn2" class="secondary">Continue</button>
+    </div>
+
+    <div id="screen3" class="screen">
+      <h1>Your first posts, written for you</h1>
+      <p class="sub">Copy any of these straight into Instagram or Facebook. Post one today to start getting leads.</p>
+
+      <div id="captionsLoading" class="loading">Writing your captions...</div>
+      <div id="captionsError" class="msg"></div>
+      <div id="captionsContainer" style="display:none;"></div>
+
+      <button id="regenerateBtn" class="secondary" style="display:none;">Generate different captions</button>
+      <br style="display:block; margin-top:12px;">
+      <button id="continueBtn3" style="margin-top:16px;">Continue to dashboard</button>
     </div>
   </div>
 
@@ -292,8 +328,64 @@
     });
 
     document.getElementById('continueBtn2').addEventListener('click', () => {
-      // Step 3 (social captions) isn't built yet —
-      // land in the dashboard for now.
+      document.getElementById('screen2').classList.remove('active');
+      document.getElementById('screen3').classList.add('active');
+      document.getElementById('progressStep3').classList.add('active');
+      loadCaptions();
+    });
+
+    async function loadCaptions() {
+      const loading = document.getElementById('captionsLoading');
+      const errorEl = document.getElementById('captionsError');
+      const container = document.getElementById('captionsContainer');
+      const regenBtn = document.getElementById('regenerateBtn');
+
+      loading.style.display = 'block';
+      errorEl.className = 'msg';
+      container.style.display = 'none';
+      regenBtn.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/onboarding/captions', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not generate captions');
+
+        loading.style.display = 'none';
+        container.innerHTML = '';
+        data.captions.forEach((caption, i) => {
+          const card = document.createElement('div');
+          card.className = 'caption-card';
+          card.innerHTML = `${caption}<br><button class="caption-copy-btn" data-idx="${i}">Copy</button><span class="caption-copied" id="captionCopied${i}">Copied!</span>`;
+          container.appendChild(card);
+        });
+        container.style.display = 'block';
+        regenBtn.style.display = 'inline-block';
+
+        document.querySelectorAll('.caption-copy-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = btn.dataset.idx;
+            navigator.clipboard.writeText(data.captions[idx]).then(() => {
+              const copiedEl = document.getElementById(`captionCopied${idx}`);
+              copiedEl.classList.add('show');
+              setTimeout(() => copiedEl.classList.remove('show'), 2000);
+            });
+          });
+        });
+      } catch (err) {
+        loading.style.display = 'none';
+        errorEl.className = 'msg show';
+        errorEl.textContent = err.message || 'Something went wrong generating captions. Please try again.';
+        regenBtn.style.display = 'inline-block';
+        regenBtn.textContent = 'Try again';
+      }
+    }
+
+    document.getElementById('regenerateBtn').addEventListener('click', () => {
+      document.getElementById('regenerateBtn').textContent = 'Generate different captions';
+      loadCaptions();
+    });
+
+    document.getElementById('continueBtn3').addEventListener('click', () => {
       window.location.href = '/admin.html';
     });
 
