@@ -111,5 +111,64 @@ async function getReceptionistReply({ apiKey, studioName, slots, history, userMe
     rawAssistantContent: content,
   };
 }
+/**
+ * Generates 3 short social media captions promoting the studio's
+ * chosen onboarding offer. Plain text generation, no tools — much
+ * simpler than getReceptionistReply, just a single-turn request.
+ * @param {object} opts
+ * @param {string} opts.apiKey
+ * @param {string} opts.studioName
+ * @param {object} opts.offer - {label, description, value}
+ * @param {function} [opts.fetchImpl] - injectable for tests
+ * @returns {Promise<string[]>} - 3 caption strings
+ */
+async function generateSocialCaptions({ apiKey, studioName, offer, fetchImpl }) {
+  const doFetch = fetchImpl || fetch;
+  if (!apiKey) {
+    throw new Error("Missing ANTHROPIC_API_KEY. Set it as an environment variable before starting the server.");
+  }
 
-module.exports = { getReceptionistReply, buildSystemPrompt, CAPTURE_LEAD_TOOL, DEFAULT_MODEL };
+  const prompt = `Write 3 short, distinct Instagram/Facebook captions for ${studioName}, a dance studio, promoting this offer:
+
+Offer: ${offer.label}
+Details: ${offer.description}
+Price: ${offer.value}
+
+Each caption should:
+- Be 2-4 sentences, casual and inviting, not salesy or corny
+- Include 1-2 relevant emoji, used naturally
+- End with a clear call to action (e.g. "link in bio", "tap the link", "DM us")
+- Feel like a real small-business owner wrote it, not a marketing agency
+
+Return ONLY the 3 captions, separated by a line with just "---" between them. No numbering, no titles, no extra commentary.`;
+
+  const res = await doFetch(ANTHROPIC_API_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: DEFAULT_MODEL,
+      max_tokens: 500,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Anthropic API error ${res.status}: ${errText}`);
+  }
+
+  const data = await res.json();
+  const content = data.content || [];
+  const text = content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+
+  return text
+    .split(/\n?---\n?/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
+}
+
+module.exports = { getReceptionistReply, generateSocialCaptions, buildSystemPrompt, CAPTURE_LEAD_TOOL, DEFAULT_MODEL };
