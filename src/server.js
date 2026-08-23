@@ -671,6 +671,10 @@ router.post("/api/onboarding/captions", async ({ req, res }) => {
     sendJson(res, 502, { error: err.message });
   }
 });
+router.post("/api/onboarding/complete", async ({ req, res }) => {
+  db.prepare("UPDATE tenants SET onboarding_completed = 1 WHERE id = ?").run(req.tenantId);
+  sendJson(res, 200, { ok: true });
+});
 
 // ============================================================
 // Scheduler — the piece that actually sends what sequence_steps
