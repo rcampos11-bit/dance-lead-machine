@@ -573,9 +573,11 @@ function renderPricingCard(cat) {
       <div class="stat"><div class="num">$${Number(cat.revenue || 0).toLocaleString()}</div><div class="lbl">Revenue</div></div>
       <div class="stat"><div class="num">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
     </div>
-    <div class="ic-actions">
+        <div class="ic-actions">
       <button data-action="edit" data-id="${cat.id}">Edit</button>
       <button data-action="toggle" data-id="${cat.id}">${cat.active ? "Set Inactive" : "Set Active"}</button>
+      <button data-action="moveUp" data-id="${cat.id}">↑ Move Up</button>
+      <button data-action="moveDown" data-id="${cat.id}">↓ Move Down</button>
       <button data-action="remove" data-id="${cat.id}" class="danger">Remove</button>
     </div>`;
   return card;
@@ -652,7 +654,30 @@ async function refreshPricing() {
         await refreshPricing();
         return;
       }
+       
+      if (action === "moveUp" || action === "moveDown") {
+        const idx = pricingCategories.findIndex((c) => String(c.id) === String(id));
+        const swapIdx = action === "moveUp" ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= pricingCategories.length) return;
 
+        const current = pricingCategories[idx];
+        const swapWith = pricingCategories[swapIdx];
+
+        await Promise.all([
+          fetch(`/api/pricing/${current.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ sortOrder: swapWith.sortOrder }),
+          }),
+          fetch(`/api/pricing/${swapWith.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ sortOrder: current.sortOrder }),
+          }),
+        ]);
+        await refreshPricing();
+        return;
+      }
       if (action === "remove") {
         await fetch(`/api/pricing/${id}`, { method: "DELETE" });
         await refreshPricing();
