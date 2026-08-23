@@ -102,6 +102,10 @@ function updateCategory(db, tenantId, id, fields) {
     sets.push("label = ?");
     values.push(fields.label.trim());
   }
+  if (fields.sortOrder !== undefined && fields.sortOrder !== null && !Number.isNaN(Number(fields.sortOrder))) {
+    sets.push("sort_order = ?");
+    values.push(Number(fields.sortOrder));
+  }
   if (typeof fields.product === "string" && fields.product.trim()) {
     sets.push("product = ?");
     values.push(fields.product.trim());
