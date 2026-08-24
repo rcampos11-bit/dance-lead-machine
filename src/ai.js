@@ -10,42 +10,47 @@
 // deterministic code in logic.js — the AI's job is understanding
 // language, not running the business logic.
 // ============================================================
-const { CATEGORIES, CATEGORY_KEYS } = require("./logic");
-
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
 
-const CAPTURE_LEAD_TOOL = {
-  name: "capture_lead",
-  description:
-    "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone and/or email), which category their inquiry falls into, and their response to the appointment time options (a slot number, or that none worked for them). Always also say a short, warm closing line in the same reply.",
-  input_schema: {
-    type: "object",
-    properties: {
-      name: { type: "string", description: "The prospect's name." },
-      phone: { type: "string", description: "Their phone number, if they gave one. Empty string if not given." },
-      email: { type: "string", description: "Their email address, if they gave one. Empty string if not given." },
-      category: {
-        type: "string",
-        enum: CATEGORY_KEYS,
-        description: "Which kind of dance inquiry this is.",
+// Builds the capture_lead tool with an enum of whichever category
+// keys are currently active in this tenant's database — NOT a
+// hardcoded list. This keeps the AI's categories in sync with
+// whatever the studio actually configured in the Pricing tab.
+function buildCaptureLeadTool(categories) {
+  const categoryKeys = categories.map((c) => c.key);
+  return {
+    name: "capture_lead",
+    description:
+      "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone and/or email), which category their inquiry falls into, and their response to the appointment time options (a slot number, or that none worked for them). Always also say a short, warm closing line in the same reply.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The prospect's name." },
+        phone: { type: "string", description: "Their phone number, if they gave one. Empty string if not given." },
+        email: { type: "string", description: "Their email address, if they gave one. Empty string if not given." },
+        category: {
+          type: "string",
+          enum: categoryKeys,
+          description: "Which kind of dance inquiry this is.",
+        },
+        notes: {
+          type: "string",
+          description: "A brief 1-2 sentence summary of what they want, in plain language, including their answer to your follow-up question.",
+        },
+        time_preference: {
+          type: ["string", "null"],
+          enum: ["morning", "afternoon", "evening", null],
+          description: "Their preferred time of day for a callback, or null if they didn't give one.",
+        },
       },
-      notes: {
-        type: "string",
-        description: "A brief 1-2 sentence summary of what they want, in plain language, including their answer to your follow-up question.",
-      },
-      time_preference: {
-        type: ["string", "null"],
-        enum: ["morning", "afternoon", "evening", null],
-        description: "Their preferred time of day for a callback, or null if they didn't give one.",
-      },
+      required: ["name", "phone", "email", "category", "notes"],
     },
-    required: ["name", "phone", "email", "category", "notes"],
-  },
-};
+  };
+}
 
-function buildSystemPrompt({ studioName }) {
-  const categoryList = CATEGORY_KEYS.map((k) => `- ${k}: ${CATEGORIES[k].label}`).join("\n");
+function buildSystemPrompt({ studioName, categories }) {
+  const categoryList = categories.map((c) => `- ${c.key}: ${c.label}`).join("\n");
   return `You are the AI Receptionist for ${studioName}, a dance studio. You are warm, concise, and efficient — you are texting with a prospective student, not writing an essay. Keep every reply to 1-3 short sentences, plain conversational language, no bullet points.
 
 Your job in this conversation, one step at a time:
@@ -71,7 +76,7 @@ Never call capture_lead before you have all four pieces of information. Never as
  * @param {function} [opts.fetchImpl] - injectable for tests
  * @returns {Promise<{reply: string, toolCall: object|null, rawAssistantContent: array}>}
  */
-async function getReceptionistReply({ apiKey, studioName, slots, history, userMessage, fetchImpl }) {
+async function getReceptionistReply({ apiKey, studioName, categories, slots, history, userMessage, fetchImpl }) {
   const doFetch = fetchImpl || fetch;
   if (!apiKey) {
     throw new Error("Missing ANTHROPIC_API_KEY. Set it as an environment variable before starting the server.");
@@ -89,8 +94,8 @@ async function getReceptionistReply({ apiKey, studioName, slots, history, userMe
     body: JSON.stringify({
       model: DEFAULT_MODEL,
       max_tokens: 500,
-      system: buildSystemPrompt({ studioName }),
-      tools: [CAPTURE_LEAD_TOOL],
+      system: buildSystemPrompt({ studioName, categories }),
+      tools: [buildCaptureLeadTool(categories)],
       messages,
     }),
   });
@@ -171,4 +176,4 @@ Return ONLY the 3 captions, separated by a line with just "---" between them. No
     .filter((c) => c.length > 0);
 }
 
-module.exports = { getReceptionistReply, generateSocialCaptions, buildSystemPrompt, CAPTURE_LEAD_TOOL, DEFAULT_MODEL };
+module.exports = { getReceptionistReply, generateSocialCaptions, buildSystemPrompt, buildCaptureLeadTool, DEFAULT_MODEL };
