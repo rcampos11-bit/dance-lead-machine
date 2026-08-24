@@ -5,17 +5,6 @@
    the source of truth.
    ============================================================ */
 
-const CATEGORY_LABELS = {
-  wedding: "Wedding Dance",
-  competitive: "Competitive / Team",
-  kids: "Kids Program",
-  private: "Private Lessons",
-  group: "Group Class",
-  social: "Social Dancing",
-  workshop: "Workshop / Event",
-  beginner: "Beginner / Never Danced",
-};
-
 const QUICKSTARTS = [
   { label: "Wedding lead", text: "My fiancé and I need help with our first dance for our wedding in October." },
   { label: "Beginner lead", text: "I've never danced before. Do you have beginner classes?" },
@@ -324,12 +313,17 @@ document.getElementById("simAddBtn").addEventListener("click", async () => {
 // ============================================================
 // Studio Team
 // ============================================================
+function categoryLabel(key) {
+  const cat = pricingCategories.find((c) => c.key === key);
+  return cat ? cat.label : key;
+}
+
 function populateSpecialtyChecks() {
   const el = document.getElementById("specialtyChecks");
   el.innerHTML = "";
-  Object.entries(CATEGORY_LABELS).forEach(([key, label]) => {
+  pricingCategories.forEach((cat) => {
     const lbl = document.createElement("label");
-    lbl.innerHTML = `<input type="checkbox" id="spec_${key}" value="${key}"> ${escapeHtml(label)}`;
+    lbl.innerHTML = `<input type="checkbox" id="spec_${cat.key}" value="${cat.key}"> ${escapeHtml(cat.label)}`;
     el.appendChild(lbl);
   });
 }
@@ -342,10 +336,10 @@ function renderInstructorCard(inst, instLeads, booked, revenue) {
   card.className = "instructor-card" + (inst.active ? "" : " inactive");
 
   if (editingInstructorId === inst.id) {
-    const specChecksHtml = Object.entries(CATEGORY_LABELS)
-      .map(([key, label]) => {
-        const checked = inst.specialties.includes(key) ? "checked" : "";
-        return `<label><input type="checkbox" class="edit-spec" value="${key}" ${checked}> ${escapeHtml(label)}</label>`;
+        const specChecksHtml = pricingCategories
+      .map((cat) => {
+        const checked = inst.specialties.includes(cat.key) ? "checked" : "";
+        return `<label><input type="checkbox" class="edit-spec" value="${cat.key}" ${checked}> ${escapeHtml(cat.label)}</label>`;
       })
       .join("");
     card.innerHTML = `
@@ -363,8 +357,8 @@ function renderInstructorCard(inst, instLeads, booked, revenue) {
     return card;
   }
 
-  const specLabels = inst.specialties.length
-    ? inst.specialties.map((k) => CATEGORY_LABELS[k] || k).join(", ")
+    const specLabels = inst.specialties.length
+    ? inst.specialties.map((k) => categoryLabel(k)).join(", ")
     : "No specialty — general rotation";
   card.innerHTML = `
     <div class="ic-head">
@@ -519,7 +513,7 @@ document.getElementById("addInstructorBtn").addEventListener("click", async () =
     showToast("Enter a name first.");
     return;
   }
-  const specialties = Object.keys(CATEGORY_LABELS).filter((key) => document.getElementById("spec_" + key).checked);
+    const specialties = pricingCategories.map((c) => c.key).filter((key) => document.getElementById("spec_" + key).checked);
   const res = await fetch("/api/instructors", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -801,11 +795,11 @@ async function checkOnboarding() {
   const shouldContinue = await checkOnboarding();
   if (!shouldContinue) return;
 
-  newConversation();
+    newConversation();
   renderSequenceLibrary();
-  populateSpecialtyChecks();
   checkHealth();
-  refreshPricing();
+  await refreshPricing();
+  populateSpecialtyChecks();
 
   await applyAccountType();
   await refreshLeads();
