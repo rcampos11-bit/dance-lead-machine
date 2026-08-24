@@ -157,11 +157,20 @@ let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND ten
     });
   }
 
+    const activeCategories = getCategories(db, tenantId).filter((c) => c.active);
+  if (activeCategories.length === 0) {
+    return sendJson(res, 500, {
+      error: "No active pricing categories are configured. Add one in the admin Pricing tab.",
+      sessionId,
+    });
+  }
+
   let aiResult;
   try {
     aiResult = await getReceptionistReply({
       apiKey,
       studioName: STUDIO_NAME,
+      categories: activeCategories,
       slots: state.slots,
       history: toAnthropicHistory(messages),
       userMessage,
