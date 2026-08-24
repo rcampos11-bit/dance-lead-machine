@@ -478,7 +478,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-router.post("/api/signup", async ({ res, body }) => {
+router.post("/api/signup", async ({ req, res, body }) => {
   const studioName = (body.studioName || "").trim();
   const email = (body.email || "").trim().toLowerCase();
   const password = (body.password || "").toString();
@@ -509,7 +509,7 @@ router.post("/api/signup", async ({ res, body }) => {
 
   const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  const info = db
+    const info = db
     .prepare(
       `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at, square_customer_id, square_subscription_id)
        VALUES (?, ?, ?, ?, 'trialing', ?, ?, ?)`
@@ -523,6 +523,25 @@ router.post("/api/signup", async ({ res, body }) => {
       squareIds.squareCustomerId,
       squareIds.squareSubscriptionId
     );
+
+  const trialEndDateLabel = new Date(trialEndsAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: `Welcome to Dance Lead Machine, ${studioName}!`,
+      body: `Hi ${studioName},\n\nWelcome to Dance Lead Machine! Your 14-day free trial has started — no charge until ${trialEndDateLabel}.\n\nLog into your dashboard anytime at:\nhttps://${req.headers.host}/admin.html\n\nUse the email and password you just created to sign in.\n\nQuestions? Just reply to this email — we're happy to help.`,
+    });
+    console.log(`Welcome email sent successfully to ${email}.`);
+  } catch (err) {
+    console.warn(`Welcome email FAILED for ${email}:`, err.message);
+    // Don't block signup success on email failure — the account
+    // still exists and works even if the welcome email didn't send.
+  }
 
   sendJson(res, 201, {
     ok: true,
