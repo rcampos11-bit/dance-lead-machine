@@ -473,7 +473,7 @@
   <div class="section-title">Recent Sales</div>
   <div class="window feed" id="feed"></div>
 
-  <div class="footnote">Showcase: November 7, 2026 · Contest ends day of showcase<br>🥇 $100 · 🥈 $50 · 🥉 $25<br>Cash sales count once turned in and confirmed. Leaderboard totals reflect confirmed sales only.</div>
+  <div class="footnote">Showcase: November 7, 2026 · Contest ends day of showcase<br>🥇 $100 · 🥈 $50 · 🥉 $25<br>Sales count once confirmed against actual ticket orders or payment records.</div>
 
   <div class="admin-toggle">
     <button class="admin-link" id="admin-link">Admin: confirm sales</button>
@@ -489,7 +489,7 @@
 const API_BASE = "/api/ticket-contest/sales";
 const SHOWCASE_DATE = new Date("2026-11-07T00:00:00");
 const PRIZES = { 0: '$100', 1: '$50', 2: '$25' };
-const PAYMENT_METHODS = ["Cash", "Zelle", "Venmo", "Card"];
+const PAYMENT_METHODS = ["Online", "Cash", "Zelle", "Venmo", "Card"];
 
 let sales = [];
 let qty = 1;
