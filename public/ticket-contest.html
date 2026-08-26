@@ -166,6 +166,14 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .stub-medal{margin-right:4px;}
+  .stub-rank-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--gold-soft);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-top:3px;
+  }
   .stub-progress{
     height:4px; border-radius:2px; background:rgba(255,255,255,0.08);
     margin-top:7px; width: 100%; max-width:160px; overflow:hidden;
@@ -458,6 +466,12 @@ function medalFor(rank){
   return '';
 }
 
+function ordinal(n){
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function renderLeaderboard(){
   const totals = computeTotals();
   const names = Object.keys(totals);
@@ -476,6 +490,9 @@ function renderLeaderboard(){
     const count = totals[name];
     const pct = Math.round((count / maxCount) * 100);
     const prize = PRIZES[i];
+    const rankLabel = prize
+      ? `${ordinal(i+1)} Place · ${prize} prize`
+      : `${ordinal(i+1)} Place`;
     const stub = document.createElement('div');
     stub.className = `stub rank-${i+1}`;
     stub.innerHTML = `
@@ -485,9 +502,10 @@ function renderLeaderboard(){
       <div class="stub-body">
         <div class="stub-name-wrap">
           <div class="stub-name"><span class="stub-medal">${medalFor(i)}</span>${escapeHtml(name)}</div>
+          <div class="stub-rank-label">${rankLabel}</div>
           <div class="stub-progress"><div class="stub-progress-fill" style="width:${count>0?pct:0}%"></div></div>
         </div>
-        <div class="stub-count">${count}<span class="u">${prize ? prize : 'tix'}</span></div>
+        <div class="stub-count">${count}<span class="u">tickets</span></div>
       </div>
     `;
     el.appendChild(stub);
