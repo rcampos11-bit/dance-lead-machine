@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operation: Sold Out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy: #10152A;
+    --navy-2: #171E3A;
+    --navy-3: #1F2748;
+    --gold: #D4AF37;
+    --gold-soft: #E8CD7A;
+    --amber: #E8873A;
+    --cream: #F5F0E6;
+    --slate: #8B93AA;
+    --line: rgba(212,175,55,0.25);
+    --green: #6FBF8B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(212,175,55,0.10), transparent 60%),
+      var(--navy);
+    color:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding: 28px 16px 60px;
+  }
+  .wrap{max-width:640px; margin:0 auto;}
+
+  .marquee{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding: 28px 24px 24px;
+    background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
+    overflow:hidden;
+    margin-bottom: 22px;
+  }
+  .marquee::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(circle, var(--gold) 1.4px, transparent 1.4px);
+    background-size: 22px 22px;
+    opacity:0.06;
+    pointer-events:none;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--gold-soft);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);}
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size: clamp(28px, 7vw, 38px);
+    line-height:1.05;
+    margin: 0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--slate);
+    font-size:14.5px;
+    line-height:1.5;
+    max-width: 46ch;
+    margin: 0 0 20px;
+  }
+  .marquee-stats{
+    display:flex;
+    gap:0;
+    border-top:1px dashed var(--line);
+    padding-top:16px;
+  }
+  .mstat{flex:1; padding-right:12px;}
+  .mstat + .mstat{border-left:1px dashed var(--line); padding-left:16px;}
+  .mstat .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight:600;
+    color:var(--gold-soft);
+    display:block;
+  }
+  .mstat .lbl{
+    font-size:11.5px;
+    color:var(--slate);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    font-weight:600;
+    margin: 30px 2px 12px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  .section-title span.tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--slate);
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+
+  .stub-list{display:flex; flex-direction:column; gap:12px;}
+  .stub{
+    position:relative;
+    display:flex;
+    align-items:stretch;
+    background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .stub.rank-1{border-color: rgba(212,175,55,0.65); box-shadow: 0 0 0 1px rgba(212,175,55,0.15), 0 8px 24px -12px rgba(212,175,55,0.35);}
+  .stub-notch{
+    position:absolute; width:16px; height:16px; border-radius:50%;
+    background: var(--navy);
+    border:1px solid var(--line);
+    top:50%; transform:translateY(-50%);
+  }
+  .stub-notch.left{left:-8px;}
+  .stub-notch.right{right:-8px;}
+  .stub-rank{
+    width: 62px;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-size:24px;
+    color: var(--slate);
+    border-right:1px dashed var(--line);
+  }
+  .stub.rank-1 .stub-rank{color:var(--gold);}
+  .stub.rank-2 .stub-rank{color:var(--gold-soft); opacity:0.85;}
+  .stub.rank-3 .stub-rank{color:var(--gold-soft); opacity:0.6;}
+  .stub-body{
+    flex:1;
+    padding: 14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-width:0;
+  }
+  .stub-name-wrap{min-width:0;}
+  .stub-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .stub-medal{margin-right:4px;}
+  .stub-progress{
+    height:4px; border-radius:2px; background:rgba(255,255,255,0.08);
+    margin-top:7px; width: 100%; max-width:160px; overflow:hidden;
+  }
+  .stub-progress-fill{height:100%; background: linear-gradient(90deg, var(--gold), var(--amber)); border-radius:2px;}
+  .stub-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:20px;
+    font-weight:600;
+    color:var(--cream);
+    text-align:right;
+    flex-shrink:0;
+  }
+  .stub-count .u{
+    display:block;
+    font-size:10px;
+    color:var(--slate);
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-top:1px;
+  }
+
+  .window{
+    border:1px solid var(--line);
+    border-radius:16px;
+    background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
+    padding: 20px;
+    margin-top: 8px;
+  }
+  .window-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+    margin-bottom: 4px;
+  }
+  .window-hint{color:var(--slate); font-size:13px; margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--gold-soft);
+    margin-bottom:6px;
+  }
+  .pill-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .pill{
+    padding:9px 14px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,0.02);
+    color:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    transition: all 0.15s ease;
+  }
+  .pill:hover{border-color: var(--gold-soft);}
+  .pill.active{
+    background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+    color:#1a1608;
+    border-color: var(--gold);
+    font-weight:600;
+  }
+  input[type=text], input[type=number]{
+    width:100%;
+    background: rgba(255,255,255,0.03);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px 13px;
+    color:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+  }
+  input:focus{outline:none; border-color:var(--gold-soft);}
+  .qty-row{display:flex; align-items:center; gap:10px;}
+  .qty-btn{
+    width:38px; height:38px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,0.03);
+    color:var(--cream); font-size:18px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .qty-val{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:18px; font-weight:600;
+    min-width:32px; text-align:center;
+  }
+  .submit-btn{
+    width:100%;
+    margin-top:6px;
+    padding:13px;
+    border-radius:10px;
+    border:none;
+    background: linear-gradient(180deg, var(--amber), #d4762c);
+    color:#1a1105;
+    font-family:'Work Sans', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    letter-spacing:0.01em;
+  }
+  .submit-btn:disabled{opacity:0.5; cursor:not-allowed;}
+  .submit-btn:active{transform: scale(0.99);}
+  .toast{
+    text-align:center; font-size:13px; color:var(--green);
+    margin-top:10px; height:16px;
+  }
+
+  .feed{display:flex; flex-direction:column;}
+  .feed-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:11px 2px;
+    border-bottom:1px dashed var(--line);
+    font-size:14px;
+  }
+  .feed-row:last-child{border-bottom:none;}
+  .feed-left{color:var(--cream);}
+  .feed-left b{font-weight:600;}
+  .feed-left .via{color:var(--slate); font-size:12.5px;}
+  .feed-right{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--gold-soft);
+    font-size:13.5px;
+    flex-shrink:0;
+    margin-left:12px;
+  }
+  .empty{color:var(--slate); font-size:13.5px; text-align:center; padding:20px 0;}
+
+  .badge{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:2px 7px;
+    border-radius:5px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+  .badge.pending{background:rgba(232,135,58,0.15); color:var(--amber);}
+  .badge.confirmed{background:rgba(111,191,139,0.15); color:var(--green);}
+  .paytag{color:var(--slate);}
+
+  .admin-toggle{
+    text-align:center;
+    margin-top:34px;
+  }
+  .admin-link{
+    background:none; border:none; color:var(--slate);
+    font-family:'IBM Plex Mono', monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.06em;
+    cursor:pointer; text-decoration:underline; text-underline-offset:3px;
+  }
+  .admin-panel{margin-top:14px;}
+  .admin-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:12px 2px; border-bottom:1px dashed var(--line);
+  }
+  .admin-row:last-child{border-bottom:none;}
+  .admin-info{font-size:13.5px; min-width:0;}
+  .admin-info .via{color:var(--slate); font-size:12px; margin-top:2px;}
+  .admin-actions{display:flex; gap:6px; flex-shrink:0;}
+  .admin-btn{
+    padding:7px 12px; border-radius:8px; border:1px solid var(--line);
+    font-family:'Work Sans', sans-serif; font-size:12.5px; font-weight:600;
+    cursor:pointer; background:rgba(255,255,255,0.02); color:var(--cream);
+  }
+  .admin-btn.confirm{background:linear-gradient(180deg, var(--green), #4d9e6c); color:#0d1f14; border-color:transparent;}
+  .admin-btn.reject{color:#E8873A;}
+
+  .footnote{
+    text-align:center; color:var(--slate); font-size:12px;
+    margin-top:30px; line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="marquee">
+    <div class="eyebrow"><span class="dot"></span>Team Ticket Contest</div>
+    <h1>Operation: Sold Out</h1>
+    <p class="sub">Every ticket you sell to the Nov 7 showcase puts your name up in lights. Top 3 sellers take home cash.</p>
+    <div class="marquee-stats">
+      <div class="mstat"><span class="num" id="total-tickets">0</span><span class="lbl">Tickets sold</span></div>
+      <div class="mstat"><span class="num" id="days-left">–</span><span class="lbl">Days to showcase</span></div>
+      <div class="mstat"><span class="num" id="leader-name">–</span><span class="lbl">In the lead</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">Leaderboard <span class="tag" id="last-updated"></span></div>
+  <div class="stub-list" id="leaderboard"></div>
+
+  <div class="section-title">Sell a Ticket</div>
+  <div class="window">
+    <div class="window-title">Log it here</div>
+    <div class="window-hint">Pick your name, who you sold it to, and how many.</div>
+
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="seller-name" list="known-names" placeholder="e.g. Jordan T." maxlength="40">
+      <datalist id="known-names"></datalist>
+    </div>
+
+    <div class="field">
+      <label>Sold to</label>
+      <input type="text" id="buyer-name" placeholder="e.g. Maria G." maxlength="60">
+    </div>
+
+    <div class="field">
+      <label>Tickets</label>
+      <div class="qty-row">
+        <button class="qty-btn" id="qty-minus" type="button">–</button>
+        <span class="qty-val" id="qty-val">1</span>
+        <button class="qty-btn" id="qty-plus" type="button">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Paid via</label>
+      <div class="pill-row" id="payment-pills"></div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn">Add to leaderboard</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="section-title">Recent Sales</div>
+  <div class="window feed" id="feed"></div>
+
+  <div class="footnote">Showcase: November 7, 2026 · Contest ends day of showcase<br>🥇 $100 · 🥈 $50 · 🥉 $25<br>Cash sales count once turned in and confirmed. Leaderboard totals reflect confirmed sales only.</div>
+
+  <div class="admin-toggle">
+    <button class="admin-link" id="admin-link">Admin: confirm sales</button>
+  </div>
+  <div class="window admin-panel" id="admin-panel" style="display:none;">
+    <div class="window-title">Pending sales</div>
+    <div class="window-hint">Log in with your studio admin email &amp; password (same as the dashboard) to confirm or reject.</div>
+    <div id="admin-list"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "/api/ticket-contest/sales";
+const SHOWCASE_DATE = new Date("2026-11-07T00:00:00");
+const PRIZES = { 0: '$100', 1: '$50', 2: '$25' };
+const PAYMENT_METHODS = ["Cash", "Zelle", "Venmo", "Card"];
+
+let sales = [];
+let qty = 1;
+let selectedPayment = null;
+let isAdmin = false;
+let adminAuthHeader = null;
+
+function daysLeft(){
+  const now = new Date();
+  const diff = Math.ceil((SHOWCASE_DATE - now) / (1000*60*60*24));
+  return diff > 0 ? diff : 0;
+}
+
+function confirmedSales(){
+  return sales.filter(s => s.status === 'confirmed');
+}
+
+function computeTotals(){
+  const totals = {};
+  confirmedSales().forEach(s => { totals[s.seller] = (totals[s.seller] || 0) + s.count; });
+  return totals;
+}
+
+function renderMarqueeStats(){
+  const totals = computeTotals();
+  const names = Object.keys(totals);
+  const totalTickets = Object.values(totals).reduce((a,b)=>a+b, 0);
+  document.getElementById('total-tickets').textContent = totalTickets;
+  document.getElementById('days-left').textContent = daysLeft();
+
+  const ranked = names.slice().sort((a,b)=> totals[b]-totals[a]);
+  const leader = ranked.length && totals[ranked[0]] > 0 ? ranked[0] : "–";
+  document.getElementById('leader-name').textContent = leader;
+}
+
+function medalFor(rank){
+  if(rank === 0) return '🥇';
+  if(rank === 1) return '🥈';
+  if(rank === 2) return '🥉';
+  return '';
+}
+
+function renderLeaderboard(){
+  const totals = computeTotals();
+  const names = Object.keys(totals);
+  const el = document.getElementById('leaderboard');
+
+  if(names.length === 0){
+    el.innerHTML = '<div class="empty">No sales logged yet — log the first one below.</div>';
+    return;
+  }
+
+  const maxCount = Math.max(1, ...Object.values(totals));
+  const ranked = names.slice().sort((a,b)=> totals[b]-totals[a]);
+
+  el.innerHTML = '';
+  ranked.forEach((name, i) => {
+    const count = totals[name];
+    const pct = Math.round((count / maxCount) * 100);
+    const prize = PRIZES[i];
+    const stub = document.createElement('div');
+    stub.className = `stub rank-${i+1}`;
+    stub.innerHTML = `
+      <div class="stub-notch left"></div>
+      <div class="stub-notch right"></div>
+      <div class="stub-rank">${i+1}</div>
+      <div class="stub-body">
+        <div class="stub-name-wrap">
+          <div class="stub-name"><span class="stub-medal">${medalFor(i)}</span>${escapeHtml(name)}</div>
+          <div class="stub-progress"><div class="stub-progress-fill" style="width:${count>0?pct:0}%"></div></div>
+        </div>
+        <div class="stub-count">${count}<span class="u">${prize ? prize : 'tix'}</span></div>
+      </div>
+    `;
+    el.appendChild(stub);
+  });
+}
+
+function renderKnownNames(){
+  const names = [...new Set(sales.map(s => s.seller))].sort();
+  const dl = document.getElementById('known-names');
+  dl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
+}
+
+function renderFeed(){
+  const el = document.getElementById('feed');
+  if(sales.length === 0){
+    el.innerHTML = '<div class="empty">No sales logged yet — be the first!</div>';
+    return;
+  }
+  const recent = sales.slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at)).slice(0, 12);
+  el.innerHTML = recent.map(s => {
+    const d = new Date(s.created_at);
+    const dateStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const badge = s.status === 'confirmed'
+      ? '<span class="badge confirmed">Confirmed</span>'
+      : '<span class="badge pending">Pending</span>';
+    return `
+      <div class="feed-row">
+        <div class="feed-left"><b>${escapeHtml(s.seller)}</b> sold ${s.count} to ${escapeHtml(s.buyer)}${badge}<div class="via">${dateStr} · <span class="paytag">${escapeHtml(s.payment_method || '–')}</span></div></div>
+        <div class="feed-right">+${s.count}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderPaymentPills(){
+  const wrap = document.getElementById('payment-pills');
+  wrap.innerHTML = '';
+  PAYMENT_METHODS.forEach(method => {
+    const p = document.createElement('button');
+    p.type = 'button';
+    p.className = 'pill' + (selectedPayment === method ? ' active' : '');
+    p.textContent = method;
+    p.onclick = () => { selectedPayment = method; renderPaymentPills(); };
+    wrap.appendChild(p);
+  });
+}
+
+function renderAdminPanel(){
+  const list = document.getElementById('admin-list');
+  const pending = sales.filter(s => s.status === 'pending').sort((a,b)=> new Date(a.created_at) - new Date(b.created_at));
+  if(pending.length === 0){
+    list.innerHTML = '<div class="empty">Nothing waiting on confirmation.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  pending.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'admin-row';
+    const d = new Date(s.created_at);
+    const dateStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    row.innerHTML = `
+      <div class="admin-info">
+        <b>${escapeHtml(s.seller)}</b> · ${s.count} ticket${s.count>1?'s':''} · ${escapeHtml(s.buyer)}
+        <div class="via">${dateStr} · ${escapeHtml(s.payment_method || '–')}</div>
+      </div>
+      <div class="admin-actions">
+        <button class="admin-btn confirm" data-id="${s.id}" data-action="confirm">Confirm</button>
+        <button class="admin-btn reject" data-id="${s.id}" data-action="reject">Reject</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.admin-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      btn.disabled = true;
+      try{
+        const resp = await fetch(`${API_BASE}/${id}/${action}`, {
+          method: 'POST',
+          headers: { 'Authorization': adminAuthHeader }
+        });
+        if(resp.status === 401){
+          alert('Login expired or incorrect — please log in again.');
+          isAdmin = false;
+          adminAuthHeader = null;
+          document.getElementById('admin-panel').style.display = 'none';
+          document.getElementById('admin-link').textContent = 'Admin: confirm sales';
+          return;
+        }
+        await loadSales();
+      }catch(e){
+        alert('Could not reach the server — try again.');
+      }
+    };
+  });
+}
+
+document.getElementById('admin-link').onclick = async () => {
+  const panel = document.getElementById('admin-panel');
+  if(isAdmin){
+    isAdmin = false;
+    adminAuthHeader = null;
+    panel.style.display = 'none';
+    document.getElementById('admin-link').textContent = 'Admin: confirm sales';
+    return;
+  }
+  const email = prompt('Studio admin email (same as your dashboard login):');
+  if(email === null) return;
+  const password = prompt('Studio admin password:');
+  if(password === null) return;
+
+  const header = 'Basic ' + btoa(`${email}:${password}`);
+  // Verify credentials with a harmless GET before showing the panel.
+  try{
+    const resp = await fetch('/api/me', { headers: { 'Authorization': header } });
+    if(!resp.ok){
+      alert('Incorrect email or password.');
+      return;
+    }
+  }catch(e){
+    alert('Could not reach the server — try again.');
+    return;
+  }
+
+  adminAuthHeader = header;
+  isAdmin = true;
+  panel.style.display = 'block';
+  document.getElementById('admin-link').textContent = 'Admin: hide panel';
+  renderAdminPanel();
+};
+
+function renderAll(){
+  renderMarqueeStats();
+  renderLeaderboard();
+  renderFeed();
+  renderKnownNames();
+  if(isAdmin) renderAdminPanel();
+  document.getElementById('last-updated').textContent = confirmedSales().length ? 'live' : '';
+}
+
+async function loadSales(){
+  try{
+    const resp = await fetch(API_BASE);
+    sales = resp.ok ? await resp.json() : [];
+  }catch(e){
+    sales = [];
+  }
+  renderAll();
+}
+
+document.getElementById('qty-minus').onclick = () => {
+  qty = Math.max(1, qty - 1);
+  document.getElementById('qty-val').textContent = qty;
+};
+document.getElementById('qty-plus').onclick = () => {
+  qty = Math.min(99, qty + 1);
+  document.getElementById('qty-val').textContent = qty;
+};
+
+document.getElementById('submit-btn').onclick = async () => {
+  const seller = document.getElementById('seller-name').value.trim();
+  const buyer = document.getElementById('buyer-name').value.trim();
+  const toast = document.getElementById('toast');
+
+  if(!seller){
+    toast.style.color = '#E8873A';
+    toast.textContent = 'Add your name first';
+    return;
+  }
+  if(!buyer){
+    toast.style.color = '#E8873A';
+    toast.textContent = 'Add who bought the ticket';
+    return;
+  }
+  if(!selectedPayment){
+    toast.style.color = '#E8873A';
+    toast.textContent = 'Select how they paid';
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+
+  try{
+    const resp = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seller, buyer, count: qty, paymentMethod: selectedPayment })
+    });
+
+    if(!resp.ok){
+      throw new Error('Save failed');
+    }
+
+    toast.style.color = '#6FBF8B';
+    toast.textContent = `Logged ${qty} ticket${qty>1?'s':''} for ${seller} — pending confirmation`;
+    document.getElementById('buyer-name').value = '';
+    qty = 1;
+    document.getElementById('qty-val').textContent = qty;
+    selectedPayment = null;
+    renderPaymentPills();
+    await loadSales();
+  }catch(e){
+    toast.style.color = '#E8873A';
+    toast.textContent = 'Could not save — try again';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Add to leaderboard';
+  setTimeout(()=>{ toast.textContent=''; }, 3500);
+};
+
+renderPaymentPills();
+loadSales();
+</script>
+</body>
+</html>
