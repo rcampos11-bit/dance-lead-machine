@@ -69,12 +69,22 @@ function openDb() {
       body TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'scheduled'
     );
-    CREATE TABLE IF NOT EXISTS conversations (
+        CREATE TABLE IF NOT EXISTS conversations (
       session_id TEXT PRIMARY KEY,
       tenant_id INTEGER NOT NULL DEFAULT 1,
       state TEXT NOT NULL DEFAULT '{}',
       messages TEXT NOT NULL DEFAULT '[]',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS ticket_sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      seller TEXT NOT NULL,
+      buyer TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      payment_method TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     
   `);
