@@ -442,6 +442,67 @@ router.delete("/api/instructors/:id", async ({ req, res, params }) => {
 });
 
 // ============================================================
+// Ticket Contest — "Operation: Sold Out" leaderboard.
+// GET/POST are public (anyone on the team can view and log a
+// sale). Confirm/reject require the same studio admin login
+// used for /admin.html (email + password via Basic Auth).
+// ============================================================
+router.get("/api/ticket-contest/sales", async ({ res }) => {
+  const rows = db
+    .prepare("SELECT * FROM ticket_sales WHERE tenant_id = 1 ORDER BY created_at DESC")
+    .all();
+  sendJson(res, 200, rows);
+});
+
+router.post("/api/ticket-contest/sales", async ({ res, body }) => {
+  const seller = (body.seller || "").toString().trim().slice(0, 60);
+  const buyer = (body.buyer || "").toString().trim().slice(0, 60);
+  const count = Math.max(1, Math.min(99, parseInt(body.count, 10) || 1));
+  const paymentMethod = (body.paymentMethod || "").toString().trim();
+  const allowedMethods = ["Cash", "Zelle", "Venmo", "Card"];
+
+  if (!seller) return sendJson(res, 400, { error: "Your name is required" });
+  if (!buyer) return sendJson(res, 400, { error: "Buyer name is required" });
+  if (!allowedMethods.includes(paymentMethod)) {
+    return sendJson(res, 400, { error: "Choose a valid payment method" });
+  }
+
+  const info = db
+    .prepare(
+      "INSERT INTO ticket_sales (tenant_id, seller, buyer, count, payment_method, status) VALUES (1, ?, ?, ?, ?, 'pending')"
+    )
+    .run(seller, buyer, count, paymentMethod);
+
+  sendJson(res, 201, { ok: true, id: info.lastInsertRowid });
+});
+
+router.post("/api/ticket-contest/sales/:id/confirm", async ({ req, res, params }) => {
+  const tenant = checkAdminAuth(req);
+  if (!tenant) {
+    res.writeHead(401, {
+      "content-type": "text/plain; charset=utf-8",
+      "www-authenticate": 'Basic realm="Studio Admin"',
+    });
+    return res.end("Authentication required");
+  }
+  db.prepare("UPDATE ticket_sales SET status = 'confirmed' WHERE id = ? AND tenant_id = 1").run(params.id);
+  sendJson(res, 200, { ok: true });
+});
+
+router.post("/api/ticket-contest/sales/:id/reject", async ({ req, res, params }) => {
+  const tenant = checkAdminAuth(req);
+  if (!tenant) {
+    res.writeHead(401, {
+      "content-type": "text/plain; charset=utf-8",
+      "www-authenticate": 'Basic realm="Studio Admin"',
+    });
+    return res.end("Authentication required");
+  }
+  db.prepare("DELETE FROM ticket_sales WHERE id = ? AND tenant_id = 1").run(params.id);
+  sendJson(res, 200, { ok: true });
+});
+
+// ============================================================
 // Pricing (admin-editable dance categories & rates)
 // ============================================================
 router.get("/api/pricing", async ({ req, res }) => {
