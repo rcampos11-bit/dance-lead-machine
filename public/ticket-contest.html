@@ -98,6 +98,59 @@
     letter-spacing:0.06em;
   }
 
+  .countdown{
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding: 18px 20px;
+    background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
+    text-align:center;
+    margin-bottom: 22px;
+  }
+  .countdown-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    color:var(--slate);
+    margin-bottom:12px;
+  }
+  .countdown-clock{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:6px;
+  }
+  .cd-unit{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-width:52px;
+  }
+  .cd-num{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:clamp(26px, 7vw, 36px);
+    color:var(--gold-soft);
+    line-height:1;
+    font-variant-numeric: tabular-nums;
+  }
+  .cd-unit-lbl{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    color:var(--slate);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    margin-top:4px;
+  }
+  .cd-colon{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:clamp(22px, 6vw, 30px);
+    color:var(--amber);
+    font-weight:600;
+    align-self:flex-start;
+    margin-top:2px;
+  }
+
   .section-title{
     font-family:'Fraunces', serif;
     font-size:19px;
@@ -367,6 +420,19 @@
     </div>
   </div>
 
+  <div class="countdown">
+    <div class="countdown-label">Time left to sell</div>
+    <div class="countdown-clock">
+      <div class="cd-unit"><span class="cd-num" id="cd-days">00</span><span class="cd-unit-lbl">days</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-unit"><span class="cd-num" id="cd-hours">00</span><span class="cd-unit-lbl">hrs</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-unit"><span class="cd-num" id="cd-mins">00</span><span class="cd-unit-lbl">min</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-unit"><span class="cd-num" id="cd-secs">00</span><span class="cd-unit-lbl">sec</span></div>
+    </div>
+  </div>
+
   <div class="section-title">Leaderboard <span class="tag" id="last-updated"></span></div>
   <div class="stub-list" id="leaderboard"></div>
 
@@ -436,6 +502,25 @@ function daysLeft(){
   const diff = Math.ceil((SHOWCASE_DATE - now) / (1000*60*60*24));
   return diff > 0 ? diff : 0;
 }
+
+function updateCountdownClock(){
+  const now = new Date();
+  let diff = SHOWCASE_DATE - now;
+  if(diff < 0) diff = 0;
+
+  const days = Math.floor(diff / (1000*60*60*24));
+  const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+  const mins = Math.floor((diff % (1000*60*60)) / (1000*60));
+  const secs = Math.floor((diff % (1000*60)) / 1000);
+
+  document.getElementById('cd-days').textContent = String(days).padStart(2, '0');
+  document.getElementById('cd-hours').textContent = String(hours).padStart(2, '0');
+  document.getElementById('cd-mins').textContent = String(mins).padStart(2, '0');
+  document.getElementById('cd-secs').textContent = String(secs).padStart(2, '0');
+}
+
+updateCountdownClock();
+setInterval(updateCountdownClock, 1000);
 
 function confirmedSales(){
   return sales.filter(s => s.status === 'confirmed');
