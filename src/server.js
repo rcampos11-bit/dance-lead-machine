@@ -459,7 +459,7 @@ router.post("/api/ticket-contest/sales", async ({ res, body }) => {
   const buyer = (body.buyer || "").toString().trim().slice(0, 60);
   const count = Math.max(1, Math.min(99, parseInt(body.count, 10) || 1));
   const paymentMethod = (body.paymentMethod || "").toString().trim();
-  const allowedMethods = ["Cash", "Zelle", "Venmo", "Card"];
+  const allowedMethods = ["Online", "Cash", "Zelle", "Venmo", "Card"];
 
   if (!seller) return sendJson(res, 400, { error: "Your name is required" });
   if (!buyer) return sendJson(res, 400, { error: "Buyer name is required" });
