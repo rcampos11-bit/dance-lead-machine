@@ -50,7 +50,9 @@ function openDb() {
       engagement INTEGER DEFAULT 3,
       appointment_label TEXT,
       appointment_date TEXT,
-      time_preference TEXT
+      time_preference TEXT,
+      sms_consent TEXT,
+      sms_consent_at TEXT
     );
     CREATE TABLE IF NOT EXISTS sequences (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +95,12 @@ function openDb() {
   const leadCols = db.prepare("PRAGMA table_info(leads)").all();
   if (!leadCols.some((c) => c.name === "time_preference")) {
     db.exec("ALTER TABLE leads ADD COLUMN time_preference TEXT");
+  }
+
+  // Migration: add SMS consent tracking to existing databases that predate this column
+  if (!leadCols.some((c) => c.name === "sms_consent")) {
+    db.exec("ALTER TABLE leads ADD COLUMN sms_consent TEXT");
+    db.exec("ALTER TABLE leads ADD COLUMN sms_consent_at TEXT");
   }
 
   // Migration: add tenant_id to any pre-existing databases that predate
