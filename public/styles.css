@@ -166,6 +166,56 @@
   .lead-card table{border-collapse:collapse;width:100%;}
   .lead-card td{padding:2px 4px;vertical-align:top;}
   .lead-card td.k{color:var(--muted);white-space:nowrap;padding-right:8px;}
+  .consent-card{
+    align-self:flex-start;
+    max-width:92%;
+    background:#F4F6FB;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+    font-size:12.5px;
+  }
+  .consent-card .consent-question{
+    font-size:13.5px;
+    color:var(--text);
+    margin:0 0 10px;
+    font-weight:600;
+  }
+  .consent-card .consent-disclosure{
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.5;
+    margin:0 0 12px;
+  }
+  .consent-card .consent-actions{
+    display:flex;
+    gap:8px;
+  }
+  .consent-btn{
+    font-size:12.5px;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    border:1px solid var(--border);
+    transition:all .15s;
+  }
+  .consent-btn.yes{
+    background:var(--navy);
+    color:#fff;
+    border-color:var(--navy);
+  }
+  .consent-btn.yes:hover{opacity:.9;}
+  .consent-btn.no{
+    background:#fff;
+    color:var(--navy-light);
+  }
+  .consent-btn.no:hover{
+    background:#EEF1F8;
+  }
+  .consent-btn:disabled{
+    opacity:.5;
+    cursor:default;
+  }
   .composer{
     border-top:1px solid var(--border);
     padding:12px 14px;
