@@ -256,14 +256,130 @@ const load = getLoadByInstructor(tenantId);
     sessionId
   );
 
-  sendJson(res, 200, {
+    sendJson(res, 200, {
     sessionId,
     reply: aiResult.reply,
     done: state.done,
     lead: leadSummary,
+    awaitingConsent,
+  });
+});
+// ============================================================
+// POST /api/chat/consent — the SMS consent button posts here.
+// This is the ONLY place a lead's sms_consent gets set, and it is
+// only ever driven by an explicit button click from chat.js, never
+// by the AI interpreting free text.
+// ============================================================
+router.post("/api/chat/consent", async ({ req, res, body }) => {
+  const sessionId = (body.sessionId || "").toString();
+  const consent = body.consent === true;
+  const tenantId = 1;
+
+  const convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND tenant_id = ?").get(sessionId, tenantId);
+  if (!convo) return sendJson(res, 404, { error: "Conversation not found", sessionId });
+
+  const state = JSON.parse(convo.state);
+  if (!state.awaitingConsent || !state.pendingLead) {
+    return sendJson(res, 400, { error: "No pending SMS consent for this conversation", sessionId });
+  }
+
+  const smsConsent = consent ? "yes" : "no";
+  const leadSummary = finalizeLead(tenantId, sessionId, state.pendingLead, smsConsent);
+
+  state.done = true;
+  state.awaitingConsent = false;
+  state.leadId = leadSummary.id;
+  delete state.pendingLead;
+
+  db.prepare("UPDATE conversations SET state = ?, updated_at = datetime('now') WHERE session_id = ?").run(
+    JSON.stringify(state),
+    sessionId
+  );
+
+  sendJson(res, 200, {
+    sessionId,
+    done: true,
+    lead: leadSummary,
+    smsConsent,
   });
 });
 
+// ============================================================
+// Writes a lead row (plus its default follow-up sequence) to the
+// database and returns the summary shown in the chat UI. Shared by
+// the no-phone-given immediate path and the /api/chat/consent path
+// above, so both go through identical logic.
+// ============================================================
+function finalizeLead(tenantId, sessionId, pending, smsConsent) {
+  const { name, email, phone, cat, instructor, notes, timePreference } = pending;
+
+  const leadRow = {
+    name,
+    email,
+    phone,
+    recommendedProduct: cat.product,
+    assignedInstructor: instructor,
+    appointment: null,
+  };
+
+  const insertLead = db.prepare(`
+  INSERT INTO leads (
+    tenant_id, session_id, name, phone, email, dance_interest, goal_notes, lead_source,
+    pipeline_stage, next_follow_up, assigned_instructor, recommended_product,
+    potential_revenue, engagement, appointment_label, appointment_date, time_preference,
+    sms_consent, sms_consent_at
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+`);
+  const info = insertLead.run(
+    tenantId,
+    sessionId,
+    name,
+    phone,
+    email,
+    cat.label,
+    notes,
+    "AI Receptionist (Website Chat)",
+    "Qualified",
+    null,
+    instructor,
+    cat.product,
+    cat.revenue,
+    4,
+    null,
+    null,
+    timePreference,
+    smsConsent,
+    smsConsent !== null ? new Date().toISOString() : null
+  );
+  const leadId = info.lastInsertRowid;
+
+  const templateKey = "new_inquiry_no_response";
+  const steps = generateSequenceSteps(leadRow, templateKey, null);
+  const insertSeq = db.prepare(
+    "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
+  );
+  const seqInfo = insertSeq.run(tenantId, leadId, templateKey, templateKeyLabel(templateKey));
+  const insertStep = db.prepare(
+    "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
+  );
+  for (const s of steps) {
+    insertStep.run(seqInfo.lastInsertRowid, s.dateStr, s.sortKey, s.channel, s.body, s.status);
+  }
+
+  return {
+    id: leadId,
+    name,
+    email,
+    phone,
+    danceInterest: cat.label,
+    recommendedProduct: cat.product,
+    potentialRevenue: cat.revenue,
+    assignedInstructor: instructor,
+    pipelineStage: "Qualified",
+    timePreference,
+    smsConsent,
+  };
+}
 function templateKeyLabel(key) {
   const { SEQUENCE_TEMPLATES } = require("./logic");
   return (SEQUENCE_TEMPLATES[key] && SEQUENCE_TEMPLATES[key].label) || key;
