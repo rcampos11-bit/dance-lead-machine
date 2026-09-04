@@ -170,13 +170,14 @@ function generateSequenceSteps(lead, templateKey, apptDateObj, now = new Date())
   const today = new Date(now.getTime());
   today.setHours(0, 0, 0, 0);
 
-  const hasEmail = !!(lead.email && lead.email.trim());
+    const hasEmail = !!(lead.email && lead.email.trim());
   const hasPhone = !!(lead.phone && lead.phone.trim());
+  const canText = hasPhone && lead.smsConsent === "yes";
 
   return tmpl.steps
     .filter((s) => {
       if (s.channel === "email") return hasEmail;
-      if (s.channel === "text") return hasPhone;
+      if (s.channel === "text") return canText;
       return true;
     })
     .map((s) => {
