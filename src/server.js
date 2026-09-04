@@ -396,15 +396,17 @@ router.get("/api/leads", async ({ req, res }) => {
 
 router.get("/api/leads.csv", async ({ req, res }) => {
   const rows = db.prepare("SELECT * FROM leads WHERE tenant_id = ? ORDER BY id ASC").all(req.tenantId);
-  const headers = [
+    const headers = [
     "Date Added", "Name", "Phone", "Email", "Dance Interest", "Goal / Notes",
     "Lead Source", "Pipeline Stage", "Last Contact", "Next Follow-Up",
     "Assigned Instructor", "Recommended Product", "Potential Revenue ($)", "Engagement (1-5)",
+    "SMS Consent",
   ];
   const csvRows = rows.map((r) => [
     r.date_added, r.name, r.phone, r.email, r.dance_interest, r.goal_notes,
     r.lead_source, r.pipeline_stage, r.last_contact, r.next_follow_up,
     r.assigned_instructor, r.recommended_product, r.potential_revenue, r.engagement,
+    r.sms_consent || "n/a",
   ]);
   const csv = [headers, ...csvRows]
     .map((row) => row.map(csvEscape).join(","))
