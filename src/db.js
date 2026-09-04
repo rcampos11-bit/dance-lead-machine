@@ -7,6 +7,28 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { hashPassword, isHashed } = require("./auth");
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "data", "dance_lead_machine.db");
+
+// Turns a business name into a URL-safe slug ("Robert's Studio!" -> "roberts-studio"),
+// then appends -2, -3, etc. if that slug is already taken by another tenant.
+// Used both by the initial DB migration (for existing tenants) and by the
+// signup route (for brand-new ones), so slug generation stays consistent.
+function generateUniqueSlug(db, name, excludeTenantId) {
+  const base = (name || "studio")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "studio";
+
+  let candidate = base;
+  let n = 2;
+  while (true) {
+    const existing = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(candidate);
+    if (!existing || existing.id === excludeTenantId) return candidate;
+    candidate = `${base}-${n}`;
+    n++;
+  }
+}
+
 function openDb() {
   const dir = path.dirname(DB_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -103,6 +125,21 @@ function openDb() {
     db.exec("ALTER TABLE leads ADD COLUMN sms_consent_at TEXT");
   }
 
+  // Migration: add a public slug to tenants so the chat widget can be
+  // tenant-aware via a URL param (?t=<slug>) instead of always serving
+  // tenant 1. Existing tenants (created before this) get a slug derived
+  // from their name so old rows still get one.
+  const tenantColsForSlug = db.prepare("PRAGMA table_info(tenants)").all();
+  if (!tenantColsForSlug.some((c) => c.name === "slug")) {
+    db.exec("ALTER TABLE tenants ADD COLUMN slug TEXT");
+    const rowsNeedingSlug = db.prepare("SELECT id, name FROM tenants WHERE slug IS NULL").all();
+    for (const t of rowsNeedingSlug) {
+      const slug = generateUniqueSlug(db, t.name);
+      db.prepare("UPDATE tenants SET slug = ? WHERE id = ?").run(slug, t.id);
+    }
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)");
+  }
+
   // Migration: add tenant_id to any pre-existing databases that predate
   // multi-tenancy. New installs get it from CREATE TABLE above already;
   // this only fires on databases created before this change shipped.
@@ -146,14 +183,23 @@ addTenantCol("chosen_offer_key", "chosen_offer_key TEXT");
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
   if (tenantCount === 0) {
+    const defaultName = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
     db.prepare(
-  "INSERT INTO tenants (id, name, admin_user, admin_password, account_type) VALUES (1, ?, ?, ?, ?)"
+  "INSERT INTO tenants (id, name, admin_user, admin_password, account_type, slug) VALUES (1, ?, ?, ?, ?, ?)"
 ).run(
-  process.env.STUDIO_NAME || "Dance Lead Machine Studio",
+  defaultName,
   process.env.ADMIN_USER || "admin",
   hashPassword(process.env.ADMIN_PASSWORD || ""),
-  (process.env.ACCOUNT_TYPE || "studio").toLowerCase()
+  (process.env.ACCOUNT_TYPE || "studio").toLowerCase(),
+  generateUniqueSlug(db, defaultName)
 );
+  }
+
+  // Belt-and-suspenders: catch any tenant row that still has no slug
+  // (e.g. one inserted directly, bypassing the paths above).
+  const stillMissingSlug = db.prepare("SELECT id, name FROM tenants WHERE slug IS NULL OR slug = ''").all();
+  for (const t of stillMissingSlug) {
+    db.prepare("UPDATE tenants SET slug = ? WHERE id = ?").run(generateUniqueSlug(db, t.name), t.id);
   }
 
   // Migration: hash any legacy plain-text admin_password values
@@ -203,4 +249,4 @@ if (pcCols.length > 0 && !pcCols.some((c) => c.name === "tenant_id")) {
 }
   return db;
 }
-module.exports = { openDb, DB_PATH };
+module.exports = { openDb, DB_PATH, generateUniqueSlug };
