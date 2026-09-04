@@ -199,9 +199,9 @@ router.post("/api/chat", async ({ req, res, body }) => {
 
   let aiResult;
   try {
-    aiResult = await getReceptionistReply({
+        aiResult = await getReceptionistReply({
       apiKey,
-      studioName: STUDIO_NAME,
+      studioName: studioNameForThisChat,
       categories: activeCategories,
       slots: state.slots,
       history: toAnthropicHistory(messages),
