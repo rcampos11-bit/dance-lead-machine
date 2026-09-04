@@ -182,13 +182,20 @@ router.post("/api/chat", async ({ req, res, body }) => {
       done: false,
     });
   }
-    const activeCategories = getCategories(db, tenantId).filter((c) => c.active);
+        const activeCategories = getCategories(db, tenantId).filter((c) => c.active);
   if (activeCategories.length === 0) {
     return sendJson(res, 500, {
       error: "No active pricing categories are configured. Add one in the admin Pricing tab.",
       sessionId,
     });
   }
+
+  // Use THIS tenant's actual business name, not the global STUDIO_NAME env
+  // var — critical once a second real customer exists, since the AI's
+  // greeting and the SMS consent disclosure both need to say the right
+  // business name, not always yours.
+  const tenantRow = db.prepare("SELECT name FROM tenants WHERE id = ?").get(tenantId);
+  const studioNameForThisChat = (tenantRow && tenantRow.name) || STUDIO_NAME;
 
   let aiResult;
   try {
