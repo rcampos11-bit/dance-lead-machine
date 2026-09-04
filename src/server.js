@@ -156,7 +156,13 @@ let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND ten
       done: true,
     });
   }
-
+  if (state.awaitingConsent) {
+    return sendJson(res, 200, {
+      sessionId,
+      reply: "Just tap one of the buttons above to let us know — that's the only thing left!",
+      done: false,
+    });
+  }
     const activeCategories = getCategories(db, tenantId).filter((c) => c.active);
   if (activeCategories.length === 0) {
     return sendJson(res, 500, {
