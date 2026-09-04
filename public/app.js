@@ -158,8 +158,17 @@ async function refreshLeads() {
   const stageLine = lead.appointment_label
     ? `📅 ${escapeHtml(lead.appointment_label)} · ${escapeHtml(lead.assigned_instructor || "")}`
     : `⏳ ${escapeHtml(lead.pipeline_stage)} · ${escapeHtml(lead.assigned_instructor || "")}`;
-  const prefLine = lead.time_preference
+    const prefLine = lead.time_preference
     ? `<div class="meta">🕐 Best time: ${escapeHtml(lead.time_preference.charAt(0).toUpperCase() + lead.time_preference.slice(1))}</div>`
+    : "";
+  // Only relevant when a phone number is on file. "Not asked" covers
+  // leads captured before this feature existed — never assume consent.
+  const smsLine = lead.phone
+    ? lead.sms_consent === "yes"
+      ? `<div class="meta">📱 SMS consent: ✅ Yes</div>`
+      : lead.sms_consent === "no"
+      ? `<div class="meta">📱 SMS consent: ❌ No</div>`
+      : `<div class="meta">📱 SMS consent: ⚠️ Not on file</div>`
     : "";
   row.innerHTML = `
     <div><span class="name">${escapeHtml(lead.name || "(no name)")}</span>
@@ -167,7 +176,8 @@ async function refreshLeads() {
     </div>
     <div class="meta">${escapeHtml(lead.recommended_product || "")} · $${Number(lead.potential_revenue || 0).toLocaleString()} · Engagement ${lead.engagement}/5</div>
     <div class="meta">${stageLine}</div>
-    ${prefLine}`;
+    ${prefLine}
+    ${smsLine}`;
   el.appendChild(row);
 });
 }
