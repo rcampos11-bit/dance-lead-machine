@@ -313,13 +313,14 @@ router.post("/api/chat/consent", async ({ req, res, body }) => {
 function finalizeLead(tenantId, sessionId, pending, smsConsent) {
   const { name, email, phone, cat, instructor, notes, timePreference } = pending;
 
-  const leadRow = {
+    const leadRow = {
     name,
     email,
     phone,
     recommendedProduct: cat.product,
     assignedInstructor: instructor,
     appointment: null,
+    smsConsent,
   };
 
   const insertLead = db.prepare(`
