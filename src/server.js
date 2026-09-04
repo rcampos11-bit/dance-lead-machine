@@ -182,7 +182,8 @@ let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND ten
   messages.push({ role: "user", content: userMessage });
   messages.push({ role: "assistant", content: aiResult.rawAssistantContent });
 
-  let leadSummary = null;
+    let leadSummary = null;
+  let awaitingConsent = null;
 
   if (aiResult.toolCall) {
     const tc = aiResult.toolCall;
@@ -213,76 +214,34 @@ const load = getLoadByInstructor(tenantId);
       instructor = pickInstructor(tc.category, roster, load);
     }
 
-    const leadRow = {
-  name: tc.name,
-  email,
-  phone,
-  recommendedProduct: cat.product,
-  assignedInstructor: instructor,
-  appointment: null,
-};
-
     let notes = tc.notes || "";
     notes += timePreference
       ? ` | Prefers ${timePreference} for a callback.`
       : ` | No time-of-day preference given — needs a personal follow-up to schedule.`;
 
-    const insertLead = db.prepare(`
-  INSERT INTO leads (
-    tenant_id, session_id, name, phone, email, dance_interest, goal_notes, lead_source,
-    pipeline_stage, next_follow_up, assigned_instructor, recommended_product,
-    potential_revenue, engagement, appointment_label, appointment_date, time_preference
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-`);
-const info = insertLead.run(
-  tenantId,
-  sessionId,
-  tc.name,
-  phone,
-  email,
-  cat.label,
-  notes,
-  "AI Receptionist (Website Chat)",
-  "Qualified",
-  null,
-  instructor,
-  cat.product,
-  cat.revenue,
-  4,
-  null,
-  null,
-  timePreference
-);
-    const leadId = info.lastInsertRowid;
+    const pending = { name: tc.name, email, phone, cat, instructor, notes, timePreference };
 
-    const templateKey = "new_inquiry_no_response";
-    const steps = generateSequenceSteps(leadRow, templateKey, null);
-    const insertSeq = db.prepare(
-  "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
-);
-    const seqInfo = insertSeq.run(tenantId, leadId, templateKey, templateKeyLabel(templateKey));
-    const insertStep = db.prepare(
-      "INSERT INTO sequence_steps (sequence_id, send_date, send_date_sort, channel, body, status) VALUES (?,?,?,?,?,?)"
-    );
-    for (const s of steps) {
-      insertStep.run(seqInfo.lastInsertRowid, s.dateStr, s.sortKey, s.channel, s.body, s.status);
+    if (phone) {
+      // A phone number was given — hold off writing the lead until they've
+      // explicitly answered the SMS consent question. The chat.js UI renders
+      // a real button for this; it is never inferred from free text.
+      state.pendingLead = pending;
+      state.awaitingConsent = true;
+      awaitingConsent = {
+        studioName: STUDIO_NAME,
+        question: `Would you like us to text you at ${phone} about your inquiry and dance lesson options?`,
+        disclosure: `By selecting "Yes, text me," you agree to receive text messages from ${STUDIO_NAME} regarding your inquiry, lessons, scheduling, reminders, and occasional offers. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy Policy and Terms.`,
+        yesLabel: "Yes, text me",
+        noLabel: "No thanks",
+      };
+      // state.done stays false — the conversation isn't finished until consent is answered
+    } else {
+      // No phone was given (email only) — nothing to get SMS consent for,
+      // so finalize the lead immediately as before.
+      leadSummary = finalizeLead(tenantId, sessionId, pending, null);
+      state.done = true;
+      state.leadId = leadSummary.id;
     }
-
-    state.done = true;
-    state.leadId = leadId;
-
-    leadSummary = {
-  id: leadId,
-  name: tc.name,
-  email,
-  phone,
-  danceInterest: cat.label,
-  recommendedProduct: cat.product,
-  potentialRevenue: cat.revenue,
-  assignedInstructor: instructor,
-  pipelineStage: "Qualified",
-  timePreference,
-};
   }
 
   db.prepare("UPDATE conversations SET state = ?, messages = ?, updated_at = datetime('now') WHERE session_id = ?").run(
