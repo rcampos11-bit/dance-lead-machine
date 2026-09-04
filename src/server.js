@@ -449,13 +449,14 @@ router.post("/api/sequences/simulate", async ({ req, res, body }) => {
   const leadRowRaw = db.prepare("SELECT * FROM leads WHERE id = ? AND tenant_id = ?").get(leadId, req.tenantId);
   if (!leadRowRaw) return sendJson(res, 404, { error: "Lead not found" });
 
-  const leadRow = {
+    const leadRow = {
   name: leadRowRaw.name,
   email: leadRowRaw.email,
   phone: leadRowRaw.phone,
   recommendedProduct: leadRowRaw.recommended_product,
   assignedInstructor: leadRowRaw.assigned_instructor,
   appointment: leadRowRaw.appointment_label,
+  smsConsent: leadRowRaw.sms_consent,
 };
   const apptDate = leadRowRaw.appointment_date ? new Date(leadRowRaw.appointment_date) : null;
   const steps = generateSequenceSteps(leadRow, templateKey, apptDate);
