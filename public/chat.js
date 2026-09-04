@@ -41,6 +41,57 @@ function addLeadCard(lead) {
   el.scrollTop = el.scrollHeight;
 }
 
+// Renders the SMS consent card with two real, clickable buttons.
+// This is the ONLY place consent can be given — never inferred from
+// typed text. Both buttons disable immediately on click so a double
+// click or slow network can't fire the request twice.
+function addConsentCard(consent) {
+  const el = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "consent-card";
+  div.innerHTML = `
+    <p class="consent-question">${escapeHtml(consent.question)}</p>
+    <p class="consent-disclosure">${escapeHtml(consent.disclosure)}</p>
+    <div class="consent-actions">
+      <button class="consent-btn yes" type="button">${escapeHtml(consent.yesLabel)}</button>
+      <button class="consent-btn no" type="button">${escapeHtml(consent.noLabel)}</button>
+    </div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+
+  const yesBtn = div.querySelector(".consent-btn.yes");
+  const noBtn = div.querySelector(".consent-btn.no");
+  const handleClick = (agreed) => {
+    yesBtn.disabled = true;
+    noBtn.disabled = true;
+    sendConsent(agreed);
+  };
+  yesBtn.addEventListener("click", () => handleClick(true));
+  noBtn.addEventListener("click", () => handleClick(false));
+}
+
+async function sendConsent(agreed) {
+  try {
+    const res = await fetch("/api/chat/consent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, consent: agreed }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      botSay("⚠️ Sorry, something went wrong recording that. Please try again in a moment.");
+      return;
+    }
+    lastDone = !!data.done;
+    userSay(agreed ? "Yes, text me" : "No thanks");
+    if (data.lead) {
+      addLeadCard(data.lead);
+    }
+  } catch (err) {
+    botSay("⚠️ Couldn't reach the server. Please check your connection and try again.");
+  }
+}
+
 function newConversation() {
   sessionId = null;
   lastDone = false;
@@ -66,7 +117,9 @@ async function sendMessage(text) {
     sessionId = data.sessionId;
     lastDone = !!data.done;
     botSay(data.reply);
-    if (data.done && data.lead) {
+    if (data.awaitingConsent) {
+      addConsentCard(data.awaitingConsent);
+    } else if (data.done && data.lead) {
       addLeadCard(data.lead);
     }
   } catch (err) {
