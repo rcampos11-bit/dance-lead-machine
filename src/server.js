@@ -131,10 +131,28 @@ router.post("/api/chat", async ({ req, res, body }) => {
     return sendJson(res, 400, { error: "message is required" });
   }
 
-  const tenantId = 1; // public chat widget isn't tenant-aware yet — revisit when there's a second customer
-let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND tenant_id = ?").get(sessionId, tenantId);
+      // A conversation's tenant is fixed the moment it's created and stored on
+  // its row. For an existing session we trust that stored tenant_id rather
+  // than re-resolving from the slug on every message — the slug only
+  // matters when a brand-new conversation is starting.
+  let tenantId;
+  let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ?").get(sessionId);
   let state, messages;
   if (!convo) {
+    const tenantSlug = (body.tenantSlug || "").trim();
+    if (tenantSlug) {
+      const tenant = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(tenantSlug);
+      if (!tenant) {
+        return sendJson(res, 404, {
+          error: "This chat link isn't valid. Please check the link and try again.",
+        });
+      }
+      tenantId = tenant.id;
+    } else {
+      // No slug in the URL — preserves existing links (like the one already
+      // live on countrywestcoastswing.dance) that predate multi-tenant routing.
+      tenantId = 1;
+    }
     state = { slots: generateSlots(), done: false };
     messages = [];
     db.prepare("INSERT INTO conversations (session_id, tenant_id, state, messages) VALUES (?, ?, ?, ?)").run(
@@ -144,6 +162,7 @@ let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND ten
   JSON.stringify(messages)
 );
   } else {
+    tenantId = convo.tenant_id;
     state = JSON.parse(convo.state);
     messages = JSON.parse(convo.messages);
     state.slots = (state.slots || []).map((s) => ({ ...s, dateObj: new Date(s.dateObj) }));
