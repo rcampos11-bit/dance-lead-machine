@@ -202,13 +202,26 @@
       <h1>Your QR code is ready</h1>
       <p class="sub">Print it, put it at your front desk, or share the link directly. Anyone who scans or clicks it lands straight in your AI receptionist chat.</p>
 
-      <div class="qr-box">
+            <div class="qr-box">
         <div id="qrcode"></div>
         <div class="link-row">
           <input type="text" id="leadLink" readonly>
           <button id="copyBtn">Copy Link</button>
         </div>
         <span class="copied-msg" id="copiedMsg">Copied!</span>
+      </div>
+
+      <div class="qr-box" id="sitePageRow" style="display:none;">
+        <p class="sub" style="margin-top:0;">
+          Signing up to send text messages (through Twilio or a similar service) usually asks for a link to your
+          business website. If you don't have one, this page works — it's live, real, and shows your business
+          name and what you offer.
+        </p>
+        <div class="link-row">
+          <input type="text" id="sitePageLink" readonly>
+          <button id="copySitePageBtn">Copy Link</button>
+        </div>
+        <span class="copied-msg" id="copiedSitePageMsg">Copied!</span>
       </div>
 
       <button id="downloadQrBtn">Download QR Code</button>
