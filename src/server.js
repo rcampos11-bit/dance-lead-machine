@@ -414,6 +414,81 @@ function templateKeyLabel(key) {
   return (SEQUENCE_TEMPLATES[key] && SEQUENCE_TEMPLATES[key].label) || key;
 }
 
+// Escapes a string for safe inclusion in HTML. Business names, being
+// user-supplied at signup, must never go into a response unescaped.
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+// ============================================================
+// GET /site/:slug — a minimal, real, publicly-reachable business
+// page per tenant. This exists so a customer doesn't need to build
+// or already own a website just to register their own Twilio A2P
+// Brand — Twilio's automated check just needs a live page that
+// (a) actually loads, (b) is clearly related to the business name,
+// and (c) isn't behind a login wall. Fully server-rendered — no JS
+// needed to see the content, which is what that kind of automated
+// check actually screenshots and reads.
+// ============================================================
+router.get("/site/:slug", async ({ res, params }) => {
+  const tenant = db.prepare("SELECT id, name, slug FROM tenants WHERE slug = ?").get(params.slug);
+  if (!tenant) {
+    return sendText(res, 404, "Page not found", "text/html; charset=utf-8");
+  }
+
+  const categories = getCategories(db, tenant.id).filter((c) => c.active);
+  const categoryLabels = categories.map((c) => c.label);
+  const tagline = categoryLabels.length
+    ? `Ask us anything — ${categoryLabels.slice(0, 3).join(", ").toLowerCase()}${categoryLabels.length > 3 ? ", and more" : ""}.`
+    : "Ask us anything about our dance classes and lessons.";
+
+  const offerListHtml = categoryLabels.length
+    ? `<ul class="offer-list">${categoryLabels.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`
+    : "";
+
+  const chatUrl = `/index.html?t=${encodeURIComponent(tenant.slug)}`;
+  const businessName = escapeHtml(tenant.name);
+  const initial = escapeHtml((tenant.name || "?").trim().charAt(0).toUpperCase() || "?");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${businessName} — Chat With Us</title>
+<meta name="description" content="Get in touch with ${businessName}. ${escapeHtml(tagline)}">
+<style>
+  :root{ --navy:#1F2A44; --navy-light:#3C4B6E; --gold:#C9A227; --bg:#F5F6FA; --border:#E2E5EC; --text:#26304A; --muted:#6B7284; }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:640px;margin:0 auto;padding:48px 20px 60px;text-align:center;}
+  .logo{width:64px;height:64px;border-radius:16px;margin:0 auto 20px;background:linear-gradient(135deg,var(--navy),var(--navy-light));color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;}
+  h1{font-size:26px;margin:0 0 10px;color:var(--navy);}
+  p.tagline{font-size:15px;color:var(--muted);margin:0 0 32px;line-height:1.5;}
+  .chat-btn{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 32px;border-radius:999px;}
+  .chat-btn:hover{background:var(--navy-light);}
+  .offer-list{list-style:none;padding:0;margin:36px 0 0;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+  .offer-list li{background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 16px;font-size:13px;color:var(--navy-light);}
+  footer{margin-top:48px;font-size:11.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">${initial}</div>
+    <h1>${businessName}</h1>
+    <p class="tagline">${escapeHtml(tagline)}</p>
+    <a class="chat-btn" href="${chatUrl}">💬 Chat With Us Now</a>
+    ${offerListHtml}
+    <footer>Powered by Dance Lead Machine</footer>
+  </div>
+</body>
+</html>`;
+
+  sendText(res, 200, html, "text/html; charset=utf-8");
+});
+
 // ============================================================
 // Leads
 // ============================================================
