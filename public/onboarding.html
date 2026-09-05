@@ -306,13 +306,20 @@
       }
     });
 
-    function showScreen2() {
+        function showScreen2() {
       document.getElementById('screen1').classList.remove('active');
       document.getElementById('screen2').classList.add('active');
       document.getElementById('progressStep2').classList.add('active');
 
-      const leadUrl = window.location.origin + '/index.html';
+      // Include this tenant's own slug so leads from THIS QR code/link go
+      // to THIS tenant's data, not tenant 1's, on a shared deployment.
+      const leadUrl = window.location.origin + '/index.html' + (tenantSlug ? '?t=' + encodeURIComponent(tenantSlug) : '');
       document.getElementById('leadLink').value = leadUrl;
+
+      if (tenantSlug) {
+        document.getElementById('sitePageLink').value = window.location.origin + '/site/' + encodeURIComponent(tenantSlug);
+        document.getElementById('sitePageRow').style.display = '';
+      }
 
       new QRCode(document.getElementById('qrcode'), {
         text: leadUrl,
