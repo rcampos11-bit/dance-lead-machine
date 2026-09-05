@@ -835,12 +835,13 @@ router.get("/api/me", async ({ req, res }) => {
 });
 
 router.get("/api/onboarding/status", async ({ req, res }) => {
-  const tenant = db.prepare("SELECT onboarding_completed, chosen_offer_key FROM tenants WHERE id = ?").get(req.tenantId);
+  const tenant = db.prepare("SELECT onboarding_completed, chosen_offer_key, slug FROM tenants WHERE id = ?").get(req.tenantId);
   if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
   sendJson(res, 200, {
     onboardingCompleted: !!tenant.onboarding_completed,
     chosenOfferKey: tenant.chosen_offer_key,
     offers: getOfferTemplates(),
+    slug: tenant.slug,
   });
 });
 
