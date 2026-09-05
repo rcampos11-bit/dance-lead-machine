@@ -229,13 +229,15 @@
     </div>
   </div>
 
-  <script>
+    <script>
     let selectedKey = null;
+    let tenantSlug = null;
 
     async function loadOffers() {
       try {
         const res = await fetch('/api/onboarding/status');
         const data = await res.json();
+        tenantSlug = data.slug || null;
 
         document.getElementById('loading').style.display = 'none';
         const container = document.getElementById('offers');
