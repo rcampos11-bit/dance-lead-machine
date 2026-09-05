@@ -330,11 +330,21 @@
       });
     }
 
-    document.getElementById('copyBtn').addEventListener('click', () => {
+        document.getElementById('copyBtn').addEventListener('click', () => {
       const input = document.getElementById('leadLink');
       input.select();
       navigator.clipboard.writeText(input.value).then(() => {
         const copiedMsg = document.getElementById('copiedMsg');
+        copiedMsg.classList.add('show');
+        setTimeout(() => copiedMsg.classList.remove('show'), 2000);
+      });
+    });
+
+    document.getElementById('copySitePageBtn').addEventListener('click', () => {
+      const input = document.getElementById('sitePageLink');
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => {
+        const copiedMsg = document.getElementById('copiedSitePageMsg');
         copiedMsg.classList.add('show');
         setTimeout(() => copiedMsg.classList.remove('show'), 2000);
       });
