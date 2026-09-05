@@ -259,10 +259,10 @@ const load = getLoadByInstructor(tenantId);
       // a real button for this; it is never inferred from free text.
       state.pendingLead = pending;
       state.awaitingConsent = true;
-      awaitingConsent = {
-        studioName: STUDIO_NAME,
+            awaitingConsent = {
+        studioName: studioNameForThisChat,
         question: `Would you like us to text you at ${phone} about your inquiry and dance lesson options?`,
-        disclosure: `By selecting "Yes, text me," you agree to receive text messages from ${STUDIO_NAME} regarding your inquiry, lessons, scheduling, reminders, and occasional offers. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy Policy and Terms.`,
+        disclosure: `By selecting "Yes, text me," you agree to receive text messages from ${studioNameForThisChat} regarding your inquiry, lessons, scheduling, reminders, and occasional offers. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy Policy and Terms.`,
         yesLabel: "Yes, text me",
         noLabel: "No thanks",
       };
@@ -299,10 +299,12 @@ const load = getLoadByInstructor(tenantId);
 router.post("/api/chat/consent", async ({ req, res, body }) => {
   const sessionId = (body.sessionId || "").toString();
   const consent = body.consent === true;
-  const tenantId = 1;
 
-  const convo = db.prepare("SELECT * FROM conversations WHERE session_id = ? AND tenant_id = ?").get(sessionId, tenantId);
+  // Same principle as /api/chat: trust the tenant already stored on this
+  // conversation's row rather than requiring the client to resend a slug.
+  const convo = db.prepare("SELECT * FROM conversations WHERE session_id = ?").get(sessionId);
   if (!convo) return sendJson(res, 404, { error: "Conversation not found", sessionId });
+  const tenantId = convo.tenant_id;
 
   const state = JSON.parse(convo.state);
   if (!state.awaitingConsent || !state.pendingLead) {
