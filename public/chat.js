@@ -6,6 +6,10 @@
 
 let sessionId = null;
 let lastDone = false;
+// Which tenant this chat belongs to, read once from ?t=<slug> in the URL.
+// Empty string means "no slug given" — the server falls back to tenant 1
+// (this studio's own account) to keep existing links working unchanged.
+const tenantSlug = new URLSearchParams(window.location.search).get("t") || "";
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -107,7 +111,7 @@ async function sendMessage(text) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId, message: text }),
+      body: JSON.stringify({ sessionId, message: text, tenantSlug }),
     });
     const data = await res.json();
     if (!res.ok) {
