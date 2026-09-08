@@ -46,6 +46,11 @@ seedDb.exec(`
 seedDb.prepare(
   "INSERT OR IGNORE INTO pricing_categories (tenant_id, key, label, product, revenue, active, sort_order) VALUES (1, 'wedding', 'Wedding Dance', 'Wedding Package (Private Lessons)', 900, 1, 0)"
 ).run();
+// A slug-less /api/chat request no longer resolves to tenant 1 (it now
+// returns a safe demo message instead — see multitenant_check.js for that
+// behavior). This test predates that change, so it needs tenant 1's real
+// slug to keep exercising the actual consent flow.
+const TENANT_1_SLUG = seedDb.prepare("SELECT slug FROM tenants WHERE id = 1").get().slug;
 
 const { server } = require("../src/server");
 let passed = 0, failed = 0;
@@ -82,7 +87,7 @@ async function main() {
         time_preference: "evening",
       },
     });
-    const r = await api("POST", "/api/chat", { sessionId: "consent-test-1", message: "wedding dance help" });
+    const r = await api("POST", "/api/chat", { sessionId: "consent-test-1", message: "wedding dance help", tenantSlug: TENANT_1_SLUG });
     check("not done yet", () => assert.strictEqual(r.data.done, false));
     check("no lead in response", () => assert.strictEqual(r.data.lead, null));
     check("awaitingConsent block present", () => assert.ok(r.data.awaitingConsent));
@@ -97,7 +102,7 @@ async function main() {
     check("lead NOT written to DB before consent answered", () => assert.strictEqual(row, undefined));
 
     // stray message while awaiting consent should not call the AI or insert anything
-    const stray = await api("POST", "/api/chat", { sessionId: "consent-test-1", message: "hello?" });
+    const stray = await api("POST", "/api/chat", { sessionId: "consent-test-1", message: "hello?", tenantSlug: TENANT_1_SLUG });
     check("stray message while awaiting consent is deflected, not done", () => assert.strictEqual(stray.data.done, false));
 
     // now answer YES via the consent endpoint
@@ -126,7 +131,7 @@ async function main() {
         time_preference: "morning",
       },
     });
-    await api("POST", "/api/chat", { sessionId: "consent-test-2", message: "wedding dance help" });
+    await api("POST", "/api/chat", { sessionId: "consent-test-2", message: "wedding dance help", tenantSlug: TENANT_1_SLUG });
     const consentRes = await api("POST", "/api/chat/consent", { sessionId: "consent-test-2", consent: false });
     check("declined consent still finalizes the lead", () => assert.strictEqual(consentRes.data.done, true));
     check("smsConsent recorded as no", () => assert.strictEqual(consentRes.data.lead.smsConsent, "no"));
@@ -151,7 +156,7 @@ async function main() {
         time_preference: "afternoon",
       },
     });
-    const r = await api("POST", "/api/chat", { sessionId: "consent-test-3", message: "wedding dance help" });
+    const r = await api("POST", "/api/chat", { sessionId: "consent-test-3", message: "wedding dance help", tenantSlug: TENANT_1_SLUG });
     check("done immediately (no phone -> no consent gate)", () => assert.strictEqual(r.data.done, true));
     check("no awaitingConsent block", () => assert.strictEqual(r.data.awaitingConsent, null));
     check("lead present", () => assert.ok(r.data.lead));
