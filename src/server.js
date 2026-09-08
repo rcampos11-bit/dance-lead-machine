@@ -135,24 +135,33 @@ router.post("/api/chat", async ({ req, res, body }) => {
   // its row. For an existing session we trust that stored tenant_id rather
   // than re-resolving from the slug on every message — the slug only
   // matters when a brand-new conversation is starting.
-  let tenantId;
+    let tenantId;
   let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ?").get(sessionId);
   let state, messages;
   if (!convo) {
     const tenantSlug = (body.tenantSlug || "").trim();
-    if (tenantSlug) {
-      const tenant = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(tenantSlug);
-      if (!tenant) {
-        return sendJson(res, 404, {
-          error: "This chat link isn't valid. Please check the link and try again.",
-        });
-      }
-      tenantId = tenant.id;
-    } else {
-      // No slug in the URL — preserves existing links (like the one already
-      // live on countrywestcoastswing.dance) that predate multi-tenant routing.
-      tenantId = 1;
+    if (!tenantSlug) {
+      // No tenant slug at all — this used to silently fall back to tenant 1
+      // (this studio's real data), which was only safe while the live
+      // "Chat With Us Now" button omitted its slug. That button now passes
+      // its slug explicitly, so this path is only hit by a stray visitor
+      // (e.g. landing on danceleadmachine.com directly) or an old cached
+      // link. Nothing is persisted here — no conversation row, no lead —
+      // so a random visitor can never end up mixed into real business data.
+      return sendJson(res, 200, {
+        sessionId,
+        reply: "👋 This is the Dance Lead Machine demo assistant! To chat with a specific studio, use the link or QR code that studio shared with you.",
+        done: true,
+        isDemo: true,
+      });
     }
+    const tenant = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(tenantSlug);
+    if (!tenant) {
+      return sendJson(res, 404, {
+        error: "This chat link isn't valid. Please check the link and try again.",
+      });
+    }
+    tenantId = tenant.id;
     state = { slots: generateSlots(), done: false };
     messages = [];
     db.prepare("INSERT INTO conversations (session_id, tenant_id, state, messages) VALUES (?, ?, ?, ?)").run(
