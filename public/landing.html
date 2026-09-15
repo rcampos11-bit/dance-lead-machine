@@ -741,7 +741,7 @@
   </div>
 </footer>
 
-<script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+<script src="https://web.squarecdn.com/v1/square.js"></script>
 <script>
   // Pre-select tier in the signup form when a pricing card's CTA is clicked
   document.querySelectorAll('[data-tier]').forEach(function (el) {
@@ -758,12 +758,13 @@
   // which renders a secure, PCI-compliant card form directly
   // from Square (the raw card number never touches our server
   // or even this page's own JS — only a one-time token does).
-  // Currently pointed at Square SANDBOX — swap the <script> tag
-  // above and these IDs to production values before launch.
+  // Now pointed at Square PRODUCTION (Dance Lead Machine's own
+  // Location, separate from the studio's WCS location) — this
+  // processes real cards and real money.
   // ----------------------------------------------------------
   var API_BASE = 'https://dance-lead-machine-cwcsd.onrender.com';
-  var SQUARE_APP_ID = 'sandbox-sq0idb-KZZcteY39OUAIwvfP_XJEA';
-  var SQUARE_LOCATION_ID = 'LPHP6T9VE9MNZ';
+  var SQUARE_APP_ID = 'sq0idp-6bXyykYTNwJGqz1M18R2Og';
+  var SQUARE_LOCATION_ID = 'LGA9W0KHAQ8V5';
 
   var form = document.getElementById('signupForm');
   var submitBtn = form.querySelector('button[type="submit"]');
