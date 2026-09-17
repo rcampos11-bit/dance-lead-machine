@@ -8,7 +8,7 @@ const crypto = require("node:crypto");
 const { URL } = require("node:url");
 
 const { Router, sendJson, sendText, serveStatic } = require("./router");
-const { openDb } = require("./db");
+const { openDb, generateUniqueSlug } = require("./db");
 const { getReceptionistReply, generateSocialCaptions } = require("./ai");
 const {
   generateSlots,
@@ -765,12 +765,14 @@ router.post("/api/signup", async ({ req, res, body }) => {
     });
   }
 
-  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  const slug = generateUniqueSlug(db, studioName);
 
     const info = db
     .prepare(
-      `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at, square_customer_id, square_subscription_id)
-       VALUES (?, ?, ?, ?, 'trialing', ?, ?, ?)`
+      `INSERT INTO tenants (name, admin_user, admin_password, account_type, subscription_status, trial_ends_at, square_customer_id, square_subscription_id, slug)
+       VALUES (?, ?, ?, ?, 'trialing', ?, ?, ?, ?)`
     )
     .run(
       studioName,
@@ -779,7 +781,8 @@ router.post("/api/signup", async ({ req, res, body }) => {
       accountType,
       trialEndsAt,
       squareIds.squareCustomerId,
-      squareIds.squareSubscriptionId
+      squareIds.squareSubscriptionId,
+      slug
     );
 
   const trialEndDateLabel = new Date(trialEndsAt).toLocaleDateString("en-US", {
