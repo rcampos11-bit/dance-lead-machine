@@ -21,6 +21,7 @@ const {
   addCategory,
   updateCategory,
   deleteCategory,
+  DEFAULT_CATEGORIES,
 } = require("./pricing");
 const { sendSms, sendEmail } = require("./notify");
 const { hashPassword, verifyPassword, hashResetToken } = require("./auth");
@@ -784,6 +785,10 @@ router.post("/api/signup", async ({ req, res, body }) => {
       squareIds.squareSubscriptionId,
       slug
     );
+
+    for (const category of DEFAULT_CATEGORIES) {
+    addCategory(db, info.lastInsertRowid, category);
+  }
 
   const trialEndDateLabel = new Date(trialEndsAt).toLocaleDateString("en-US", {
     month: "long",
