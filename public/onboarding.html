@@ -417,7 +417,12 @@
       loadCaptions();
     });
 
-    document.getElementById('continueBtn3').addEventListener('click', () => {
+        document.getElementById('continueBtn3').addEventListener('click', async () => {
+      try {
+        await fetch('/api/onboarding/complete', { method: 'POST' });
+      } catch (err) {
+        // ignore
+      }
       window.location.href = '/admin.html';
     });
 
