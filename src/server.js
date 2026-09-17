@@ -140,27 +140,35 @@ router.post("/api/chat", async ({ req, res, body }) => {
   let convo = db.prepare("SELECT * FROM conversations WHERE session_id = ?").get(sessionId);
   let state, messages;
   if (!convo) {
-    const tenantSlug = (body.tenantSlug || "").trim();
-    if (!tenantSlug) {
-      // No tenant slug at all — this used to silently fall back to tenant 1
-      // (this studio's real data), which was only safe while the live
-      // "Chat With Us Now" button omitted its slug. That button now passes
-      // its slug explicitly, so this path is only hit by a stray visitor
-      // (e.g. landing on danceleadmachine.com directly) or an old cached
-      // link. Nothing is persisted here — no conversation row, no lead —
-      // so a random visitor can never end up mixed into real business data.
-      return sendJson(res, 200, {
-        sessionId,
-        reply: "👋 This is the Dance Lead Machine demo assistant! To chat with a specific studio, use the link or QR code that studio shared with you.",
-        done: true,
-        isDemo: true,
-      });
-    }
-    const tenant = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(tenantSlug);
-    if (!tenant) {
-      return sendJson(res, 404, {
-        error: "This chat link isn't valid. Please check the link and try again.",
-      });
+        const tenantSlug = (body.tenantSlug || "").trim();
+    let tenant = null;
+    if (tenantSlug) {
+      tenant = db.prepare("SELECT id FROM tenants WHERE slug = ?").get(tenantSlug);
+      if (!tenant) {
+        return sendJson(res, 404, {
+          error: "This chat link isn't valid. Please check the link and try again.",
+        });
+      }
+    } else {
+      // No tenant slug — this is how the admin dashboard's own built-in
+      // "AI Receptionist" test panel calls this route. That panel is
+      // same-origin to /admin.html, so the browser attaches the same
+      // cached admin Basic Auth credentials the tenant used to log in.
+      // Use that authenticated tenant instead of assuming a random
+      // public visitor.
+      tenant = checkAdminAuth(req);
+      if (!tenant) {
+        // Truly no tenant and no admin auth — a stray visitor landing on
+        // danceleadmachine.com directly, or an old cached link. Nothing is
+        // persisted here — no conversation row, no lead — so a random
+        // visitor can never end up mixed into real business data.
+        return sendJson(res, 200, {
+          sessionId,
+          reply: "👋 This is the Dance Lead Machine demo assistant! To chat with a specific studio, use the link or QR code that studio shared with you.",
+          done: true,
+          isDemo: true,
+        });
+      }
     }
     tenantId = tenant.id;
     state = { slots: generateSlots(), done: false };
