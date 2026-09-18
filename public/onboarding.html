@@ -177,6 +177,57 @@
     display: none;
   }
   .caption-copied.show { display: inline; }
+  .warning-box {
+    background: rgba(212,70,55,0.12);
+    border: 1px solid rgba(212,70,55,0.5);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .warning-box p {
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .pricing-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--navy-light);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .pricing-row input {
+    padding: 9px 12px;
+    background: #0b1224;
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  .pricing-row .pricing-label { flex: 1 1 140px; }
+  .pricing-row .pricing-product { flex: 2 1 200px; }
+  .pricing-row .pricing-revenue { flex: 0 1 90px; }
+  .pricing-row .pricing-save-btn { padding: 9px 16px; font-size: 13px; }
+  .pricing-saved {
+    font-size: 12.5px;
+    color: var(--gold-light);
+    display: none;
+  }
+  .pricing-saved.show { display: inline; }
+  .confirm-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 24px 0;
+    font-size: 14px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .confirm-row input { width: 18px; height: 18px; }
 </style>
 </head>
 <body>
@@ -185,7 +236,7 @@
       <div class="step active" id="progressStep1"></div>
       <div class="step" id="progressStep2"></div>
       <div class="step" id="progressStep3"></div>
-      <div class="step"></div>
+      <div class="step" id="progressStep4"></div>
     </div>
 
     <div id="screen1" class="screen active">
@@ -238,7 +289,24 @@
 
       <button id="regenerateBtn" class="secondary" style="display:none;">Generate different captions</button>
       <br style="display:block; margin-top:12px;">
-      <button id="continueBtn3" style="margin-top:16px;">Continue to dashboard</button>
+      <button id="continueBtn3" style="margin-top:16px;">Continue</button>
+    </div>
+
+    <div id="screen4" class="screen">
+      <h1>⚠️ Before You Share Your Link</h1>
+      <div class="warning-box">
+        <p>The prices and services below are just examples — not real, not yours. Right now, your AI receptionist will tell your customers these exact prices. Change every one so it matches what YOU actually charge.</p>
+      </div>
+
+      <div id="pricingLoading" class="loading">Loading your pricing...</div>
+      <div id="pricingList" style="display:none;"></div>
+
+      <label class="confirm-row" for="pricingConfirmCheck">
+        <input type="checkbox" id="pricingConfirmCheck">
+        I've reviewed and updated my prices above — they're correct.
+      </label>
+
+      <button id="continueBtn4" disabled>Continue to dashboard</button>
     </div>
   </div>
 
@@ -417,7 +485,77 @@
       loadCaptions();
     });
 
-        document.getElementById('continueBtn3').addEventListener('click', async () => {
+        document.getElementById('continueBtn3').addEventListener('click', () => {
+      document.getElementById('screen3').classList.remove('active');
+      document.getElementById('screen4').classList.add('active');
+      document.getElementById('progressStep4').classList.add('active');
+      loadPricingForReview();
+    });
+
+    async function loadPricingForReview() {
+      const loading = document.getElementById('pricingLoading');
+      const list = document.getElementById('pricingList');
+      loading.style.display = 'block';
+      list.style.display = 'none';
+      list.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/pricing');
+        const categories = await res.json();
+        loading.style.display = 'none';
+        list.style.display = 'block';
+
+        categories.forEach((cat) => {
+          const row = document.createElement('div');
+          row.className = 'pricing-row';
+          row.innerHTML = `
+            <input type="text" class="pricing-label" value="${escapeAttr(cat.label)}" placeholder="Service name">
+            <input type="text" class="pricing-product" value="${escapeAttr(cat.product)}" placeholder="What you offer">
+            <input type="number" class="pricing-revenue" value="${Number(cat.revenue || 0)}" min="0" step="1" placeholder="Price">
+            <button class="pricing-save-btn" data-id="${cat.id}">Save</button>
+            <span class="pricing-saved" id="pricingSaved${cat.id}">Saved!</span>`;
+          list.appendChild(row);
+        });
+
+        document.querySelectorAll('.pricing-save-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const row = btn.closest('.pricing-row');
+            const id = btn.dataset.id;
+            const label = row.querySelector('.pricing-label').value.trim();
+            const product = row.querySelector('.pricing-product').value.trim();
+            const revenue = Number(row.querySelector('.pricing-revenue').value) || 0;
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            try {
+              await fetch(`/api/pricing/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label, product, revenue }),
+              });
+              const savedEl = document.getElementById(`pricingSaved${id}`);
+              savedEl.classList.add('show');
+              setTimeout(() => savedEl.classList.remove('show'), 2000);
+            } catch (err) {
+              // ignore — button re-enables below so they can retry
+            }
+            btn.disabled = false;
+            btn.textContent = 'Save';
+          });
+        });
+      } catch (err) {
+        loading.textContent = 'Could not load your pricing. Refresh to try again.';
+      }
+    }
+
+    function escapeAttr(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    document.getElementById('pricingConfirmCheck').addEventListener('change', (e) => {
+      document.getElementById('continueBtn4').disabled = !e.target.checked;
+    });
+
+    document.getElementById('continueBtn4').addEventListener('click', async () => {
       try {
         await fetch('/api/onboarding/complete', { method: 'POST' });
       } catch (err) {
