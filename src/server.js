@@ -212,8 +212,12 @@ router.post("/api/chat", async ({ req, res, body }) => {
   // var — critical once a second real customer exists, since the AI's
   // greeting and the SMS consent disclosure both need to say the right
   // business name, not always yours.
-  const tenantRow = db.prepare("SELECT name FROM tenants WHERE id = ?").get(tenantId);
+    const tenantRow = db.prepare("SELECT name, account_type FROM tenants WHERE id = ?").get(tenantId);
   const studioNameForThisChat = (tenantRow && tenantRow.name) || STUDIO_NAME;
+  // Same principle as the business name above — which lead-assignment mode
+  // to use is this tenant's own choice (made at signup), not whatever
+  // ACCOUNT_TYPE this deployment's env vars happen to be set to.
+  const accountTypeForThisChat = (tenantRow && tenantRow.account_type) || ACCOUNT_TYPE;
 
   let aiResult;
   try {
@@ -255,9 +259,12 @@ const phone = (tc.phone || "").trim();
 
     const timePreference = tc.time_preference || null;
 
-    let instructor;
-    if (ACCOUNT_TYPE === "solo") {
-      instructor = OWNER_NAME;
+        let instructor;
+    if (accountTypeForThisChat === "solo") {
+      // No personal-name field exists on tenants yet — the business name
+      // is the only per-tenant identity we have, and it's what the AI
+      // already greets leads with, so it's the right fallback here too.
+      instructor = studioNameForThisChat;
     } else {
       const roster = getRoster(tenantId);
 const load = getLoadByInstructor(tenantId);
