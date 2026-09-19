@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Dance Lead Machine</title>
+<meta name="description" content="Terms of Service for Dance Lead Machine, the AI receptionist platform for dance instructors and studios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-950: #10162590;
+    --navy-950-solid: #101625;
+    --navy-900: #19223a;
+    --navy-850: #1e2842;
+    --navy-800: #232f4d;
+    --gold-500: #d7a94b;
+    --gold-300: #ecc77e;
+    --gold-glow: rgba(215, 169, 75, 0.35);
+    --cream-100: #f5efe3;
+    --cream-muted: #b6bfd4;
+    --cream-faint: #7c86a0;
+    --line: rgba(215, 169, 75, 0.28);
+    --line-soft: rgba(245, 239, 227, 0.1);
+    --radius: 14px;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Work Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--navy-950-solid);
+    color: var(--cream-100);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
+
+  h1, h2 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+  em, .accent { font-style: italic; color: var(--gold-300); }
+  p { color: var(--cream-muted); margin: 0 0 14px; }
+  a { color: var(--gold-300); }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(16, 22, 37, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    color: var(--cream-100);
+  }
+  .wordmark em { font-style: italic; color: var(--gold-300); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 15px;
+  }
+  .nav-links a { text-decoration: none; color: var(--cream-muted); transition: color 0.2s; }
+  .nav-links a:hover { color: var(--cream-100); }
+
+  /* ---------- CONTENT ---------- */
+  main { padding: 64px 0 80px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin-bottom: 14px;
+  }
+
+  h1 { font-size: clamp(30px, 4vw, 40px); margin: 0 0 8px; }
+  .updated { font-family: var(--font-mono); font-size: 13px; color: var(--cream-faint); margin-bottom: 32px; }
+
+  .notice {
+    background: var(--navy-900);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 40px;
+  }
+  .notice p { color: var(--cream-100); font-size: 14.5px; margin: 0; }
+  .notice p + p { margin-top: 10px; }
+  .notice strong { color: var(--gold-300); }
+
+  section.clause { margin-bottom: 34px; }
+  h2 { font-size: 20px; color: var(--cream-100); margin: 0 0 10px; }
+  ul { color: var(--cream-muted); padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .footer-brand { display: flex; flex-direction: column; gap: 4px; }
+  .footer-brand .wordmark { font-size: 17px; }
+  .footer-brand span { font-size: 13px; color: var(--cream-faint); }
+  .footer-links { display: flex; gap: 26px; font-size: 14px; }
+  .footer-links a { text-decoration: none; color: var(--cream-faint); }
+  .footer-links a:hover { color: var(--cream-100); }
+
+  @media (max-width: 640px) {
+    .nav-links { gap: 16px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+    <nav class="nav-links">
+      <a href="/#pricing">Pricing</a>
+      <a href="/#signup">Start Free Trial</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Legal</p>
+    <h1>Terms of Service</h1>
+    <p class="updated">Draft — last edited September 18, 2026</p>
+
+    <div class="notice">
+      <p><strong>This is a starter draft, not final legal advice.</strong> It was written to give new Dance Lead Machine customers a clear, honest starting point, but it has not been reviewed by an attorney.</p>
+      <p>Before relying on this page with real, paying customers, have a lawyer review it — especially the billing, cancellation, and liability sections — and update the contact details below with your real business information.</p>
+    </div>
+
+    <section class="clause">
+      <h2>1. What Dance Lead Machine is</h2>
+      <p>Dance Lead Machine ("DLM," "we," "us") is a subscription software service that gives dance instructors and studios ("you," "Customer") an AI-powered chat receptionist for their website, along with tools to manage the leads, follow-up messages, and pricing information that receptionist collects on your behalf.</p>
+      <p>These Terms of Service govern your access to and use of Dance Lead Machine's software (the "Service"). They are separate from — and do not replace — any terms or privacy policy you publish for your own dance students or customers.</p>
+    </section>
+
+    <section class="clause">
+      <h2>2. Your account and your content</h2>
+      <ul>
+        <li>You're responsible for the accuracy of the business information, pricing, and service descriptions you enter into your account. The Service starts you off with example pricing categories that you must review and update before sharing your chat link with real customers.</li>
+        <li>You're responsible for keeping your login credentials secure and for all activity that happens under your account.</li>
+        <li>You may not use the Service to publish false, deceptive, or illegal content, or to send unsolicited or unlawful messages.</li>
+      </ul>
+    </section>
+
+    <section class="clause">
+      <h2>3. AI-generated content</h2>
+      <p>The AI receptionist generates conversational replies automatically. While we work to make it accurate and helpful, it can make mistakes, misunderstand a question, or give an answer that doesn't reflect your current pricing or availability if you haven't kept your account up to date.</p>
+      <p>You're responsible for reviewing the pricing and information your AI receptionist has access to, and for following up personally on any lead where accuracy matters. DLM is not liable for a customer decision made in reliance on an AI-generated message.</p>
+    </section>
+
+    <section class="clause">
+      <h2>4. Subscription, billing, and trial</h2>
+      <ul>
+        <li>New accounts begin with a free trial period. If you don't cancel before the trial ends, your subscription automatically converts to a paid plan and your payment method on file is charged.</li>
+        <li>Payments are processed securely through Square. DLM does not store your full card number.</li>
+        <li>Subscriptions renew automatically each billing period until cancelled. You can cancel any time from your account dashboard; cancellation takes effect at the end of the current billing period, and we do not provide partial-period refunds except where required by law.</li>
+        <li>We may change subscription pricing with advance notice; continuing to use the Service after a price change takes effect means you accept the new price.</li>
+      </ul>
+    </section>
+
+    <section class="clause">
+      <h2>5. Data collected on your behalf</h2>
+      <p>When a visitor chats with your AI receptionist, DLM collects and stores information about that visitor (such as name, phone number, email, and what they're interested in) on your behalf, so you can follow up with them. You are the one responsible for how that information is used and disclosed to your own leads — including maintaining your own privacy policy and complying with SMS/text-messaging consent laws that apply to your business. DLM acts as your data processor for this purpose; see our Privacy Policy for more detail on how we handle it on our end.</p>
+    </section>
+
+    <section class="clause">
+      <h2>6. Acceptable use</h2>
+      <p>You agree not to use the Service to harass anyone, violate any applicable law (including telemarketing and text-messaging consent laws), infringe someone else's rights, or attempt to disrupt or reverse-engineer the Service.</p>
+    </section>
+
+    <section class="clause">
+      <h2>7. Termination</h2>
+      <p>You may cancel your account at any time. We may suspend or terminate accounts that violate these Terms, don't pay their subscription, or misuse the Service. On termination, we may delete your account data after a reasonable period.</p>
+    </section>
+
+    <section class="clause">
+      <h2>8. Disclaimers and limitation of liability</h2>
+      <p>The Service is provided "as is," without warranties of any kind. To the maximum extent permitted by law, DLM is not liable for indirect, incidental, or consequential damages, or for lost revenue or lost leads, arising from your use of the Service.</p>
+    </section>
+
+    <section class="clause">
+      <h2>9. Changes to these terms</h2>
+      <p>We may update these Terms from time to time. We'll post the updated version here with a new "last edited" date. Continued use of the Service after changes take effect means you accept the updated Terms.</p>
+    </section>
+
+    <section class="clause">
+      <h2>10. Contact</h2>
+      <p>Questions about these Terms? Contact us at <em>[add your support email here]</em>.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+      <span>Built by dance instructors, for dance instructors.</span>
+    </div>
+    <div class="footer-links">
+      <a href="/#signup">Contact</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
