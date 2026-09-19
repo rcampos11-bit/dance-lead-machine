@@ -934,7 +934,7 @@ router.get("/api/health", async ({ res }) => {
 });
 router.get("/api/me", async ({ req, res }) => {
   const tenant = db
-    .prepare("SELECT id, name, account_type, subscription_status, trial_ends_at, square_subscription_id FROM tenants WHERE id = ?")
+    .prepare("SELECT id, name, account_type, subscription_status, trial_ends_at, square_subscription_id, pending_cancel_at FROM tenants WHERE id = ?")
     .get(req.tenantId);
   if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
   sendJson(res, 200, {
@@ -943,6 +943,7 @@ router.get("/api/me", async ({ req, res }) => {
     subscriptionStatus: tenant.subscription_status,
     trialEndsAt: tenant.trial_ends_at,
     hasSubscription: !!tenant.square_subscription_id,
+    pendingCancelAt: tenant.pending_cancel_at,
   });
 });
 
@@ -958,19 +959,25 @@ router.get("/api/me", async ({ req, res }) => {
 // ============================================================
 router.post("/api/me/cancel-subscription", async ({ req, res }) => {
   const tenant = db
-    .prepare("SELECT id, subscription_status, square_subscription_id FROM tenants WHERE id = ?")
+    .prepare("SELECT id, subscription_status, square_subscription_id, pending_cancel_at FROM tenants WHERE id = ?")
     .get(req.tenantId);
   if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
 
   if (!tenant.square_subscription_id) {
     return sendJson(res, 400, { error: "No subscription found on this account." });
   }
-  if (tenant.subscription_status === "canceled") {
+    if (tenant.subscription_status === "canceled") {
     return sendJson(res, 200, { ok: true, alreadyCanceled: true });
+  }
+  if (tenant.pending_cancel_at) {
+    return sendJson(res, 200, { ok: true, alreadyScheduled: true, pendingCancelAt: tenant.pending_cancel_at });
   }
 
     try {
-    await cancelSubscription(tenant.square_subscription_id);
+    const subscription = await cancelSubscription(tenant.square_subscription_id);
+    const pendingCancelAt = (subscription && subscription.canceled_date) || "scheduled";
+    db.prepare("UPDATE tenants SET pending_cancel_at = ? WHERE id = ?").run(pendingCancelAt, tenant.id);
+    return sendJson(res, 200, { ok: true, pendingCancelAt });
   } catch (err) {
     // Square rejects a second cancel on a subscription that's already
     // canceled on its end (e.g. someone canceled it directly in the
@@ -981,11 +988,16 @@ router.post("/api/me/cancel-subscription", async ({ req, res }) => {
     // "couldn't reach Square" error for something that isn't broken.
     const detail =
       (err.squareErrors && err.squareErrors.map((e) => e.detail || "").join(" ")) || err.message || "";
-    const alreadyCanceled = /already.*(cancel|inactive)|not.*active/i.test(detail);
+    function extractPendingCancelDate(detail) {
+  const match = /pending cancel date of '([\d-]+)'/i.exec(detail || "");
+  return match ? match[1] : null;
+}
+    const alreadyPending = /already.*(cancel|inactive)|not.*active/i.test(detail);
 
-    if (alreadyCanceled) {
-      db.prepare("UPDATE tenants SET subscription_status = 'canceled' WHERE id = ?").run(tenant.id);
-      return sendJson(res, 200, { ok: true, alreadyCanceled: true });
+    if (alreadyPending) {
+      const pendingCancelAt = extractPendingCancelDate(detail) || tenant.pending_cancel_at || "scheduled";
+      db.prepare("UPDATE tenants SET pending_cancel_at = ? WHERE id = ?").run(pendingCancelAt, tenant.id);
+      return sendJson(res, 200, { ok: true, alreadyScheduled: true, pendingCancelAt });
     }
 
     console.warn("Cancel subscription failed:", err.message);
@@ -994,9 +1006,7 @@ router.post("/api/me/cancel-subscription", async ({ req, res }) => {
     });
   }
 
-  db.prepare("UPDATE tenants SET subscription_status = 'canceled' WHERE id = ?").run(tenant.id);
-  sendJson(res, 200, { ok: true });
-});
+  });
 
 router.get("/api/onboarding/status", async ({ req, res }) => {
   const tenant = db.prepare("SELECT onboarding_completed, chosen_offer_key, slug FROM tenants WHERE id = ?").get(req.tenantId);
