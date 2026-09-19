@@ -824,7 +824,7 @@ async function loadBillingStatus() {
     const data = await res.json();
     const status = STATUS_LABELS[data.subscriptionStatus] || { text: data.subscriptionStatus || "Unknown", cls: "" };
     const trialLabel = formatDateLabel(data.trialEndsAt);
-    const pendingCancelLabel = formatDateLabel(data.pendingCancelAt) || data.pendingCancelAt || null;
+    const pendingCancelLabel = formatDateLabel(data.pendingCancelAt);
     const isCanceling = !!data.pendingCancelAt && data.subscriptionStatus !== "canceled";
 
     let html = isCanceling
