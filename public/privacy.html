@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Dance Lead Machine</title>
+<meta name="description" content="Privacy Policy for Dance Lead Machine, the AI receptionist platform for dance instructors and studios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-950: #10162590;
+    --navy-950-solid: #101625;
+    --navy-900: #19223a;
+    --navy-850: #1e2842;
+    --navy-800: #232f4d;
+    --gold-500: #d7a94b;
+    --gold-300: #ecc77e;
+    --gold-glow: rgba(215, 169, 75, 0.35);
+    --cream-100: #f5efe3;
+    --cream-muted: #b6bfd4;
+    --cream-faint: #7c86a0;
+    --line: rgba(215, 169, 75, 0.28);
+    --line-soft: rgba(245, 239, 227, 0.1);
+    --radius: 14px;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Work Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--navy-950-solid);
+    color: var(--cream-100);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
+
+  h1, h2 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+  em, .accent { font-style: italic; color: var(--gold-300); }
+  p { color: var(--cream-muted); margin: 0 0 14px; }
+  a { color: var(--gold-300); }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(16, 22, 37, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    color: var(--cream-100);
+  }
+  .wordmark em { font-style: italic; color: var(--gold-300); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 15px;
+  }
+  .nav-links a { text-decoration: none; color: var(--cream-muted); transition: color 0.2s; }
+  .nav-links a:hover { color: var(--cream-100); }
+
+  /* ---------- CONTENT ---------- */
+  main { padding: 64px 0 80px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin-bottom: 14px;
+  }
+
+  h1 { font-size: clamp(30px, 4vw, 40px); margin: 0 0 8px; }
+  .updated { font-family: var(--font-mono); font-size: 13px; color: var(--cream-faint); margin-bottom: 32px; }
+
+  .notice {
+    background: var(--navy-900);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 40px;
+  }
+  .notice p { color: var(--cream-100); font-size: 14.5px; margin: 0; }
+  .notice p + p { margin-top: 10px; }
+  .notice strong { color: var(--gold-300); }
+
+  section.clause { margin-bottom: 34px; }
+  h2 { font-size: 20px; color: var(--cream-100); margin: 0 0 10px; }
+  ul { color: var(--cream-muted); padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .footer-brand { display: flex; flex-direction: column; gap: 4px; }
+  .footer-brand .wordmark { font-size: 17px; }
+  .footer-brand span { font-size: 13px; color: var(--cream-faint); }
+  .footer-links { display: flex; gap: 26px; font-size: 14px; }
+  .footer-links a { text-decoration: none; color: var(--cream-faint); }
+  .footer-links a:hover { color: var(--cream-100); }
+
+  @media (max-width: 640px) {
+    .nav-links { gap: 16px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+    <nav class="nav-links">
+      <a href="/#pricing">Pricing</a>
+      <a href="/#signup">Start Free Trial</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Legal</p>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Draft — last edited September 18, 2026</p>
+
+    <div class="notice">
+      <p><strong>This is a starter draft, not final legal advice.</strong> It was written to give new Dance Lead Machine customers a clear, honest starting point, but it has not been reviewed by an attorney.</p>
+      <p>Before relying on this page with real, paying customers, have a lawyer review it, and update the contact details below with your real business information. This page also does not replace the privacy policy you show to <em>your own</em> dance students or leads — see the note in Section 3 below.</p>
+    </div>
+
+    <section class="clause">
+      <h2>1. Who this policy covers</h2>
+      <p>This Privacy Policy explains how Dance Lead Machine ("DLM," "we," "us") collects and uses information about instructors and studios who sign up for our software ("Customer," "you") and, separately, how we handle the lead information our software collects on a Customer's behalf.</p>
+    </section>
+
+    <section class="clause">
+      <h2>2. Information we collect about you (the Customer)</h2>
+      <ul>
+        <li>Account information: your business name, email address, and login details.</li>
+        <li>Billing information: processed securely through Square. We do not store your full card number.</li>
+        <li>Usage information: how you use the dashboard, such as pricing you set up and settings you change.</li>
+      </ul>
+      <p>We use this information to operate your account, process billing, provide customer support, and improve the Service.</p>
+    </section>
+
+    <section class="clause">
+      <h2>3. Information collected on your behalf (your leads)</h2>
+      <p>When someone chats with your AI receptionist, we collect information they provide — such as their name, phone number, email address, and what kind of dance services they're interested in — and store it in your account so you can follow up with them.</p>
+      <p>For this data, DLM acts as a processor on your behalf: you decide what it's used for, and you're responsible for telling your own leads how their information will be used (for example, in your own studio's privacy policy and text-messaging consent language). We simply store and deliver it to you through the dashboard and any follow-up messages you've set up.</p>
+      <p>We do not sell lead information collected through the Service, and we do not use it to advertise to your leads on our own behalf.</p>
+    </section>
+
+    <section class="clause">
+      <h2>4. Text messages and consent</h2>
+      <p>The AI receptionist may ask a visitor for permission before sending them text messages on your behalf. Message frequency varies, message and data rates may apply, and a recipient can reply STOP to opt out at any time. Consent is not a condition of purchasing any service.</p>
+      <p>We pass consent and message content through a third-party messaging provider in order to deliver texts. We do not use this content for our own marketing purposes.</p>
+    </section>
+
+    <section class="clause">
+      <h2>5. Third parties we share data with</h2>
+      <ul>
+        <li><strong>Square</strong> — to process your subscription payment.</li>
+        <li><strong>Messaging/SMS providers</strong> — to deliver text messages to your leads on your behalf.</li>
+        <li><strong>Hosting and infrastructure providers</strong> — to run the Service and store data securely.</li>
+      </ul>
+      <p>We do not sell personal information to third parties for their own marketing purposes.</p>
+    </section>
+
+    <section class="clause">
+      <h2>6. Data retention</h2>
+      <p>We keep account and lead data for as long as your account is active, plus a reasonable period afterward in case you reactivate or need an export. You can request deletion of your account and associated data by contacting us.</p>
+    </section>
+
+    <section class="clause">
+      <h2>7. Security</h2>
+      <p>We use reasonable technical and organizational measures to protect the data in your account. No system is perfectly secure, and we can't guarantee absolute security.</p>
+    </section>
+
+    <section class="clause">
+      <h2>8. Your choices</h2>
+      <p>You can review, update, or export your account data from your dashboard, or by contacting us. A lead who wants their information removed should contact you directly, since you control that relationship — but we'll assist with a deletion request passed along to us.</p>
+    </section>
+
+    <section class="clause">
+      <h2>9. Changes to this policy</h2>
+      <p>We may update this policy from time to time. We'll post the updated version here with a new "last edited" date.</p>
+    </section>
+
+    <section class="clause">
+      <h2>10. Contact</h2>
+      <p>Questions about this policy? Contact us at <em>[add your support email here]</em>.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+      <span>Built by dance instructors, for dance instructors.</span>
+    </div>
+    <div class="footer-links">
+      <a href="/#signup">Contact</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
