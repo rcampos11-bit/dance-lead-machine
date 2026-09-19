@@ -59,6 +59,19 @@ async function createSubscription({ customerId, cardId, planVariationId }) {
   return data.subscription;
 }
 
+// Cancels a subscription in Square. Square doesn't refund/stop the
+// current billing period immediately — it schedules the cancellation
+// to take effect at the end of the period the customer already paid
+// (or, during a trial, at the trial's end), so a canceling customer
+// keeps access through what they already have, but is never charged
+// again. Square's own webhook (subscription.updated, status CANCELED)
+// is what actually flips subscription_status in our DB — this call
+// just tells Square to do it; see the /api/webhooks/square handler.
+async function cancelSubscription(subscriptionId) {
+  const data = await squareRequest(`/v2/subscriptions/${subscriptionId}/cancel`, {});
+  return data.subscription;
+}
+
 // Orchestrates all three calls in order. Throws on any failure —
 // the caller (POST /api/signup) decides what to do, and currently
 // does NOT create a tenant row if this throws, so there's never
@@ -82,4 +95,4 @@ async function createTrialSubscription({ studioName, email, cardToken, tier }) {
   };
 }
 
-module.exports = { createTrialSubscription };
+module.exports = { createTrialSubscription, cancelSubscription };
