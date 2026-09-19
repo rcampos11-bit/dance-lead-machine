@@ -824,9 +824,15 @@ async function loadBillingStatus() {
     const data = await res.json();
     const status = STATUS_LABELS[data.subscriptionStatus] || { text: data.subscriptionStatus || "Unknown", cls: "" };
     const trialLabel = formatDateLabel(data.trialEndsAt);
+    const pendingCancelLabel = formatDateLabel(data.pendingCancelAt) || data.pendingCancelAt || null;
+    const isCanceling = !!data.pendingCancelAt && data.subscriptionStatus !== "canceled";
 
-    let html = `<div class="status-pill ${status.cls}">${escapeHtml(status.text)}</div>`;
-    if (data.subscriptionStatus === "trialing" && trialLabel) {
+    let html = isCanceling
+      ? `<div class="status-pill status-canceling">Canceling</div>`
+      : `<div class="status-pill ${status.cls}">${escapeHtml(status.text)}</div>`;
+    if (isCanceling) {
+      html += `<p class="billing-detail">Your subscription is set to cancel${pendingCancelLabel ? ` on <b>${escapeHtml(pendingCancelLabel)}</b>` : ""}. You'll keep access until then, and your card won't be charged again.</p>`;
+    } else if (data.subscriptionStatus === "trialing" && trialLabel) {
       html += `<p class="billing-detail">Your free trial runs through <b>${escapeHtml(trialLabel)}</b>. If you don't cancel before then, your card on file will be charged automatically.</p>`;
     } else if (data.subscriptionStatus === "active") {
       html += `<p class="billing-detail">Your subscription is active and billing normally.</p>`;
@@ -837,9 +843,11 @@ async function loadBillingStatus() {
     }
     box.innerHTML = html;
 
-    if (data.subscriptionStatus === "canceled" || !data.hasSubscription) {
+    if (data.subscriptionStatus === "canceled" || !data.hasSubscription || isCanceling) {
       cancelBtn.disabled = true;
-      cancelBtn.textContent = data.subscriptionStatus === "canceled" ? "Already Canceled" : "No Subscription on File";
+      cancelBtn.textContent = isCanceling
+        ? "Cancellation Scheduled"
+        : data.subscriptionStatus === "canceled" ? "Already Canceled" : "No Subscription on File";
     } else {
       cancelBtn.disabled = false;
       cancelBtn.textContent = "Cancel My Subscription";
@@ -876,7 +884,7 @@ document.getElementById("cancelConfirmBtn").addEventListener("click", async () =
     }
     document.getElementById("cancelStep2").classList.add("view-hidden");
     document.getElementById("cancelDone").classList.remove("view-hidden");
-    showToast("Subscription canceled.");
+    showToast(formatDateLabel(data.pendingCancelAt) ? `Cancellation scheduled for ${formatDateLabel(data.pendingCancelAt)}.` : "Cancellation scheduled.");
     await loadBillingStatus();
   } catch (err) {
     errorBox.querySelector(".confirm-text").textContent = "Couldn't reach the server. Please try again in a moment.";
