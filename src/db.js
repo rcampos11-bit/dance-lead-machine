@@ -179,6 +179,14 @@ addTenantCol("reset_token_hash", "reset_token_hash TEXT");
 addTenantCol("reset_token_expires_at", "reset_token_expires_at TEXT");
 addTenantCol("onboarding_completed", "onboarding_completed INTEGER NOT NULL DEFAULT 0");
 addTenantCol("chosen_offer_key", "chosen_offer_key TEXT");
+// Square doesn't cancel a subscription the instant it's asked to — it
+// schedules the cancellation for the end of the current trial/billing
+// period and keeps the subscription's status ACTIVE/TRIALING until
+// then. This column tracks that scheduled date (Square's own
+// "canceled_date" field) so the dashboard can say "canceling — access
+// through <date>" instead of misleadingly showing plain "Active" with
+// no sign that anything was scheduled.
+addTenantCol("pending_cancel_at", "pending_cancel_at TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
