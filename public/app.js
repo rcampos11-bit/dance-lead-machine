@@ -780,15 +780,111 @@ function switchTab(which) {
   document.getElementById("view-followup").classList.toggle("view-hidden", which !== "followup");
   document.getElementById("view-team").classList.toggle("view-hidden", which !== "team");
   document.getElementById("view-pricing").classList.toggle("view-hidden", which !== "pricing");
+  document.getElementById("view-billing").classList.toggle("view-hidden", which !== "billing");
   document.getElementById("tabBtnReceptionist").classList.toggle("active", which === "receptionist");
   document.getElementById("tabBtnFollowup").classList.toggle("active", which === "followup");
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
+  document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
+  if (which === "billing") loadBillingStatus();
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
 document.getElementById("tabBtnTeam").addEventListener("click", () => switchTab("team"));
 document.getElementById("tabBtnPricing").addEventListener("click", () => switchTab("pricing"));
+document.getElementById("tabBtnBilling").addEventListener("click", () => switchTab("billing"));
+
+// ============================================================
+// Billing tab — shows subscription status pulled from /api/me,
+// and lets the tenant cancel their own Square subscription
+// without having to email us to do it manually.
+// ============================================================
+const STATUS_LABELS = {
+  trialing: { text: "Free trial", cls: "status-trialing" },
+  active: { text: "Active", cls: "status-active" },
+  past_due: { text: "Payment past due", cls: "status-pastdue" },
+  canceled: { text: "Canceled", cls: "status-canceled" },
+  paused: { text: "Paused", cls: "status-pastdue" },
+};
+
+function formatDateLabel(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+async function loadBillingStatus() {
+  const box = document.getElementById("billingStatus");
+  const cancelBtn = document.getElementById("cancelSubBtn");
+  box.textContent = "Loading…";
+  try {
+    const res = await fetch("/api/me");
+    if (!res.ok) throw new Error("Couldn't load billing status.");
+    const data = await res.json();
+    const status = STATUS_LABELS[data.subscriptionStatus] || { text: data.subscriptionStatus || "Unknown", cls: "" };
+    const trialLabel = formatDateLabel(data.trialEndsAt);
+
+    let html = `<div class="status-pill ${status.cls}">${escapeHtml(status.text)}</div>`;
+    if (data.subscriptionStatus === "trialing" && trialLabel) {
+      html += `<p class="billing-detail">Your free trial runs through <b>${escapeHtml(trialLabel)}</b>. If you don't cancel before then, your card on file will be charged automatically.</p>`;
+    } else if (data.subscriptionStatus === "active") {
+      html += `<p class="billing-detail">Your subscription is active and billing normally.</p>`;
+    } else if (data.subscriptionStatus === "canceled") {
+      html += `<p class="billing-detail">This subscription is canceled. You won't be charged again.</p>`;
+    } else if (data.subscriptionStatus === "past_due") {
+      html += `<p class="billing-detail">Your last payment didn't go through. Please update your card with us to avoid losing access.</p>`;
+    }
+    box.innerHTML = html;
+
+    if (data.subscriptionStatus === "canceled" || !data.hasSubscription) {
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = data.subscriptionStatus === "canceled" ? "Already Canceled" : "No Subscription on File";
+    } else {
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = "Cancel My Subscription";
+    }
+  } catch (err) {
+    box.textContent = "Couldn't load billing status. Try refreshing the page.";
+  }
+}
+
+document.getElementById("cancelSubBtn").addEventListener("click", () => {
+  document.getElementById("cancelStep1").classList.add("view-hidden");
+  document.getElementById("cancelStep2").classList.remove("view-hidden");
+});
+document.getElementById("cancelBackBtn").addEventListener("click", () => {
+  document.getElementById("cancelStep2").classList.add("view-hidden");
+  document.getElementById("cancelStep1").classList.remove("view-hidden");
+});
+document.getElementById("cancelConfirmBtn").addEventListener("click", async () => {
+  const confirmBtn = document.getElementById("cancelConfirmBtn");
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = "Canceling…";
+  const errorBox = document.getElementById("cancelError");
+  errorBox.classList.add("view-hidden");
+
+  try {
+    const res = await fetch("/api/me/cancel-subscription", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      errorBox.querySelector(".confirm-text").textContent = data.error || "Something went wrong. Please try again.";
+      errorBox.classList.remove("view-hidden");
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Yes, Cancel It";
+      return;
+    }
+    document.getElementById("cancelStep2").classList.add("view-hidden");
+    document.getElementById("cancelDone").classList.remove("view-hidden");
+    showToast("Subscription canceled.");
+    await loadBillingStatus();
+  } catch (err) {
+    errorBox.querySelector(".confirm-text").textContent = "Couldn't reach the server. Please try again in a moment.";
+    errorBox.classList.remove("view-hidden");
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "Yes, Cancel It";
+  }
+});
 
 function showToast(text) {
   const t = document.getElementById("toast");
