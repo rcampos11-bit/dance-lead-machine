@@ -23,7 +23,8 @@
     <button class="tab-btn active" id="tabBtnReceptionist">💬 AI Receptionist</button>
     <button class="tab-btn" id="tabBtnFollowup">🔁 Automated Follow-Up <span class="count-pill" id="fuCount">0</span></button>
     <button class="tab-btn" id="tabBtnTeam">🏢 Studio Team <span class="count-pill" id="teamCount">0</span></button>
-    <button class="tab-btn" id="tabBtnPricing">💰 Pricing <span class="count-pill" id="pricingCount">0</span></button>
+        <button class="tab-btn" id="tabBtnPricing">💰 Pricing <span class="count-pill" id="pricingCount">0</span></button>
+    <button class="tab-btn" id="tabBtnBilling">⚙️ Billing</button>
   </div>
 
   <div id="view-receptionist">
@@ -173,11 +174,58 @@
         </div>
       </div>
 
-      <div class="side">
+            <div class="side">
         <div class="card">
           <h3>Pricing Categories <span class="count-pill" id="pricingListCount">0</span></h3>
           <p class="hint">Live from the database — edits here take effect on the next chat message.</p>
           <div id="pricingList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-billing" class="view-hidden">
+    <div class="team-layout">
+      <div class="side">
+        <div class="card">
+          <h3>Your Subscription</h3>
+          <p class="hint">Your current plan status, straight from Square.</p>
+          <div id="billingStatus" class="billing-status">Loading…</div>
+        </div>
+        <div class="card">
+          <h3>What canceling does</h3>
+          <ul class="how-it-works">
+            <li><b>No more charges</b> — your card is never billed again after you cancel.</li>
+            <li><b>You keep access for now</b> — your dashboard and AI receptionist keep working through the end of your current trial or billing period.</li>
+            <li><b>It's immediate in Square</b> — this cancels the real subscription right away, not just a request to us.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="card">
+          <h3>Cancel Subscription</h3>
+          <p class="hint">Changed your mind, or moving on? You can cancel any time — no need to call or email.</p>
+
+          <div id="cancelStep1">
+            <button id="cancelSubBtn" class="danger-btn">Cancel My Subscription</button>
+          </div>
+
+          <div id="cancelStep2" class="view-hidden">
+            <p class="confirm-text">Are you sure you want to cancel? You won't be charged again, and you'll keep access through the end of your current period.</p>
+            <div class="confirm-actions">
+              <button id="cancelConfirmBtn" class="danger-btn">Yes, Cancel It</button>
+              <button id="cancelBackBtn" class="ghost-btn">Never Mind</button>
+            </div>
+          </div>
+
+          <div id="cancelDone" class="view-hidden">
+            <p class="confirm-text confirm-success">✅ Your subscription has been canceled. You won't be charged again.</p>
+          </div>
+
+          <div id="cancelError" class="view-hidden">
+            <p class="confirm-text confirm-error"></p>
+          </div>
         </div>
       </div>
     </div>
