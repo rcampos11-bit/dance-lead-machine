@@ -26,7 +26,7 @@ const {
 const { sendSms, sendEmail } = require("./notify");
 const { hashPassword, verifyPassword, hashResetToken } = require("./auth");
 const { getOfferTemplates, getOfferByKey } = require("./onboarding");
-const { createTrialSubscription } = require("./square");
+const { createTrialSubscription, cancelSubscription } = require("./square");
 
 const PORT = process.env.PORT || 3000;
 const STUDIO_NAME = process.env.STUDIO_NAME || "Dance Lead Machine Studio";
@@ -933,12 +933,53 @@ router.get("/api/health", async ({ res }) => {
   });
 });
 router.get("/api/me", async ({ req, res }) => {
-  const tenant = db.prepare("SELECT id, name, account_type FROM tenants WHERE id = ?").get(req.tenantId);
+  const tenant = db
+    .prepare("SELECT id, name, account_type, subscription_status, trial_ends_at, square_subscription_id FROM tenants WHERE id = ?")
+    .get(req.tenantId);
   if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
   sendJson(res, 200, {
     studioName: tenant.name,
     accountType: tenant.account_type,
+    subscriptionStatus: tenant.subscription_status,
+    trialEndsAt: tenant.trial_ends_at,
+    hasSubscription: !!tenant.square_subscription_id,
   });
+});
+
+// ============================================================
+// Self-serve cancellation. Lets a real tenant cancel their own
+// Square subscription from their own dashboard, instead of having
+// to email us and wait for a manual cancel in the Square dashboard.
+// Cancels in Square first; the actual subscription_status flip to
+// 'canceled' is normally driven by Square's own webhook (so it stays
+// correct even if this request fails partway through), but we also
+// set it here immediately so the dashboard reflects it right away
+// without waiting on webhook delivery.
+// ============================================================
+router.post("/api/me/cancel-subscription", async ({ req, res }) => {
+  const tenant = db
+    .prepare("SELECT id, subscription_status, square_subscription_id FROM tenants WHERE id = ?")
+    .get(req.tenantId);
+  if (!tenant) return sendJson(res, 404, { error: "Tenant not found" });
+
+  if (!tenant.square_subscription_id) {
+    return sendJson(res, 400, { error: "No subscription found on this account." });
+  }
+  if (tenant.subscription_status === "canceled") {
+    return sendJson(res, 200, { ok: true, alreadyCanceled: true });
+  }
+
+  try {
+    await cancelSubscription(tenant.square_subscription_id);
+  } catch (err) {
+    console.warn("Cancel subscription failed:", err.message);
+    return sendJson(res, 502, {
+      error: "We couldn't reach Square to cancel your subscription. Please try again in a moment.",
+    });
+  }
+
+  db.prepare("UPDATE tenants SET subscription_status = 'canceled' WHERE id = ?").run(tenant.id);
+  sendJson(res, 200, { ok: true });
 });
 
 router.get("/api/onboarding/status", async ({ req, res }) => {
