@@ -969,9 +969,25 @@ router.post("/api/me/cancel-subscription", async ({ req, res }) => {
     return sendJson(res, 200, { ok: true, alreadyCanceled: true });
   }
 
-  try {
+    try {
     await cancelSubscription(tenant.square_subscription_id);
   } catch (err) {
+    // Square rejects a second cancel on a subscription that's already
+    // canceled on its end (e.g. someone canceled it directly in the
+    // Square dashboard, and our own DB just hadn't caught up yet via
+    // webhook). That's not really a failure from the customer's point
+    // of view — the outcome they wanted is already true — so treat it
+    // as success and sync our own status, instead of showing a scary
+    // "couldn't reach Square" error for something that isn't broken.
+    const detail =
+      (err.squareErrors && err.squareErrors.map((e) => e.detail || "").join(" ")) || err.message || "";
+    const alreadyCanceled = /already.*(cancel|inactive)|not.*active/i.test(detail);
+
+    if (alreadyCanceled) {
+      db.prepare("UPDATE tenants SET subscription_status = 'canceled' WHERE id = ?").run(tenant.id);
+      return sendJson(res, 200, { ok: true, alreadyCanceled: true });
+    }
+
     console.warn("Cancel subscription failed:", err.message);
     return sendJson(res, 502, {
       error: "We couldn't reach Square to cancel your subscription. Please try again in a moment.",
