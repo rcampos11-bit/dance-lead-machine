@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMS Consent &amp; Opt-In Flow — Dance Lead Machine</title>
+<meta name="description" content="Documentation of exactly how a website visitor opts in to receive text messages through the Dance Lead Machine AI receptionist.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-950: #10162590;
+    --navy-950-solid: #101625;
+    --navy-900: #19223a;
+    --navy-850: #1e2842;
+    --navy-800: #232f4d;
+    --gold-500: #d7a94b;
+    --gold-300: #ecc77e;
+    --gold-glow: rgba(215, 169, 75, 0.35);
+    --cream-100: #f5efe3;
+    --cream-muted: #b6bfd4;
+    --cream-faint: #7c86a0;
+    --line: rgba(215, 169, 75, 0.28);
+    --line-soft: rgba(245, 239, 227, 0.1);
+    --radius: 14px;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Work Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--navy-950-solid);
+    color: var(--cream-100);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
+
+  h1, h2 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+  em, .accent { font-style: italic; color: var(--gold-300); }
+  p { color: var(--cream-muted); margin: 0 0 14px; }
+  a { color: var(--gold-300); }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(16, 22, 37, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    color: var(--cream-100);
+  }
+  .wordmark em { font-style: italic; color: var(--gold-300); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 15px;
+  }
+  .nav-links a { text-decoration: none; color: var(--cream-muted); transition: color 0.2s; }
+  .nav-links a:hover { color: var(--cream-100); }
+
+  main { padding: 64px 0 80px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin-bottom: 14px;
+  }
+
+  h1 { font-size: clamp(30px, 4vw, 40px); margin: 0 0 8px; }
+  .updated { font-family: var(--font-mono); font-size: 13px; color: var(--cream-faint); margin-bottom: 32px; }
+
+  .notice {
+    background: var(--navy-900);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 40px;
+  }
+  .notice p { color: var(--cream-100); font-size: 14.5px; margin: 0; }
+  .notice p + p { margin-top: 10px; }
+  .notice strong { color: var(--gold-300); }
+
+  section.clause { margin-bottom: 34px; }
+  h2 { font-size: 20px; color: var(--cream-100); margin: 0 0 10px; }
+  ol, ul { color: var(--cream-muted); padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 10px; }
+
+  .mock {
+    background: var(--navy-900);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin: 18px 0;
+  }
+  .mock-question {
+    font-weight: 600;
+    color: var(--cream-100);
+    margin: 0 0 10px;
+    font-size: 15px;
+  }
+  .mock-disclosure {
+    font-size: 13.5px;
+    color: var(--cream-muted);
+    margin: 0 0 16px;
+  }
+  .mock-disclosure a { text-decoration: underline; }
+  .mock-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .mock-btn {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--cream-100);
+  }
+  .mock-btn.yes { background: var(--gold-300); color: var(--navy-950-solid); border-color: var(--gold-300); }
+
+  .steps li::marker { color: var(--gold-300); font-family: var(--font-mono); font-weight: 600; }
+
+  .try-it {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--gold-300);
+  }
+  .try-it:hover { background: var(--navy-900); }
+
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .footer-brand { display: flex; flex-direction: column; gap: 4px; }
+  .footer-brand .wordmark { font-size: 17px; }
+  .footer-brand span { font-size: 13px; color: var(--cream-faint); }
+  .footer-links { display: flex; gap: 26px; font-size: 14px; }
+  .footer-links a { text-decoration: none; color: var(--cream-faint); }
+  .footer-links a:hover { color: var(--cream-100); }
+
+  @media (max-width: 640px) {
+    .nav-links { gap: 16px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+    <nav class="nav-links">
+      <a href="/#pricing">Pricing</a>
+      <a href="/#signup">Start Free Trial</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">SMS Compliance</p>
+    <h1>How Text Message Consent Works</h1>
+    <p class="updated">Reference page for carrier / A2P 10DLC campaign review — last edited September 21, 2026</p>
+
+    <div class="notice">
+      <p><strong>This page exists to make our SMS opt-in flow easy to verify.</strong> Dance Lead Machine's AI chat receptionist is a public, no-login website widget — there is nothing behind a paywall or client login. Because the opt-in screen only appears once a visitor voluntarily shares a phone number mid-conversation, this page documents that exact flow step by step, word for word, so a reviewer can confirm it without needing to hold a live conversation with the bot.</p>
+    </div>
+
+    <section class="clause">
+      <h2>1. Where this happens</h2>
+      <p>Every Dance Lead Machine customer (a dance studio or instructor) gets a public chat widget on their own website, with no login required to use it. You can see it live right now at:</p>
+      <a class="try-it" href="https://dance-lead-machine-cwcsd.onrender.com/index.html?t=dance-lead-machine-studio" target="_blank" rel="noopener">dance-lead-machine-cwcsd.onrender.com/index.html?t=dance-lead-machine-studio</a>
+      <p style="margin-top:14px;">The same chat widget code runs for every customer — only the business name and, obviously, the phone number a visitor types in change from conversation to conversation. The opt-in mechanism itself is identical for all of them.</p>
+    </section>
+
+    <section class="clause">
+      <h2>2. Step by step</h2>
+      <ol class="steps">
+        <li>A visitor opens the chat widget and has a normal conversation with the AI receptionist about lessons, pricing, or scheduling — no phone number is required just to chat or ask questions.</li>
+        <li>If, at any point, the visitor voluntarily types a phone number into the chat, the AI immediately stops short of doing anything with it. No text message is sent, and no phone number is saved to the business's lead list yet.</li>
+        <li>Instead, the chat shows a dedicated consent card — reproduced exactly below — with two buttons and no phone number field to fill in (the number the visitor already typed is simply echoed back to them for confirmation).</li>
+        <li>Only clicking <strong>"Yes, text me"</strong> opts the visitor in. Clicking <strong>"No thanks"</strong>, or never answering, means the phone number is stored for the business's own reference but no text message is ever sent and no ongoing SMS consent is recorded. Consent is a deliberate button click — it is never inferred from anything the visitor types.</li>
+      </ol>
+    </section>
+
+    <section class="clause">
+      <h2>3. The exact consent screen (reproduced verbatim)</h2>
+      <p>This is the real card a visitor sees, word for word, including the two live links it contains:</p>
+      <div class="mock">
+        <p class="mock-question">Would you like us to text you at (555) 987-6543 about your inquiry and dance lesson options?</p>
+        <p class="mock-disclosure">By selecting "Yes, text me," you agree to receive text messages from [Business Name] regarding your inquiry, lessons, scheduling, reminders, and occasional offers. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms.html" target="_blank" rel="noopener">Terms</a>.</p>
+        <div class="mock-actions">
+          <button class="mock-btn yes" type="button" disabled>Yes, text me</button>
+          <button class="mock-btn" type="button" disabled>No thanks</button>
+        </div>
+      </div>
+      <p>"[Business Name]" and the phone number shown are the only two things that ever change — they're filled in automatically with the actual studio's name and the number the visitor just typed. Every word of the disclosure, both links, and both button labels are identical for every customer, every time.</p>
+    </section>
+
+    <section class="clause">
+      <h2>4. Policies referenced above</h2>
+      <ul>
+        <li><a href="/privacy.html">Privacy Policy</a> — how phone numbers and other visitor information are collected and used.</li>
+        <li><a href="/terms.html">Terms of Service</a> — the terms governing use of the Dance Lead Machine platform.</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="wordmark">Dance <em>Lead</em> Machine</a>
+      <span>Built by dance instructors, for dance instructors.</span>
+    </div>
+    <div class="footer-links">
+      <a href="/#signup">Contact</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
