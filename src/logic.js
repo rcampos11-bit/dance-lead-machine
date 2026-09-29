@@ -117,7 +117,7 @@ const SEQUENCE_TEMPLATES = {
     anchor: "today",
     steps: [
       { offsetDays: 0, channel: "text", body: "Hi {firstName}, we missed you today! No worries at all — want to grab a new time for {product}?" },
-      { offsetDays: 1, channel: "email", body: "Hi {firstName}, life happens! Whenever you're ready to reschedule your {product} session with {instructor}, just let us know." },
+      { offsetDays: 1, channel: "email", body: "Hi {firstName}, life happens! Whenever you're ready to reschedule your {product} session with {instructor}, just let us know. Here's a little something extra to get you back on the floor: 10% off {product} this week only." },
       { offsetDays: 4, channel: "text", body: "Hi {firstName}, one last check-in! Whenever you're ready to reschedule {product}, just reply and we'll find a time." },
     ],
   },
