@@ -118,7 +118,7 @@ const SEQUENCE_TEMPLATES = {
     steps: [
       { offsetDays: 0, channel: "text", body: "Hi {firstName}, we missed you today! No worries at all — want to grab a new time for {product}?" },
       { offsetDays: 1, channel: "email", body: "Hi {firstName}, life happens! Whenever you're ready to reschedule your {product} session with {instructor}, just let us know." },
-      { offsetDays: 4, channel: "text", body: "Hi {firstName} — we'd still love to see you! Here's a little something extra to get you back on the floor: 10% off {product} this week only." },
+      { offsetDays: 4, channel: "text", body: "Hi {firstName}, one last check-in! Whenever you're ready to reschedule {product}, just reply and we'll find a time." },
     ],
   },
   trial_no_purchase: {
@@ -127,7 +127,7 @@ const SEQUENCE_TEMPLATES = {
     steps: [
       { offsetDays: 1, channel: "text", body: "Hi {firstName}, it was great having you in for your trial! How did it feel? Would love to hear your thoughts." },
       { offsetDays: 3, channel: "email", body: "Hi {firstName}, ready to keep the momentum going with {product}? We can lock in your spot with {instructor} whenever you are." },
-      { offsetDays: 7, channel: "text", body: "Hi {firstName}, just a friendly last note — your trial pricing on {product} is still available this week if you'd like to jump in!" },
+      { offsetDays: 7, channel: "text", body: "Hi {firstName}, just a friendly last note: if you'd like to keep going with {product}, reply here and we'll get you scheduled." },
     ],
   },
   cold_nurture: {
