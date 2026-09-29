@@ -287,7 +287,7 @@ const load = getLoadByInstructor(tenantId);
             awaitingConsent = {
         studioName: studioNameForThisChat,
         question: `Would you like us to text you at ${phone} about your inquiry and dance lesson options?`,
-        disclosure: `By selecting "Yes, text me," you agree to receive text messages from ${escapeHtml(studioNameForThisChat)} regarding your inquiry, lessons, scheduling, reminders, and occasional offers. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms.html" target="_blank" rel="noopener">Terms</a>.`,
+        disclosure: `By selecting "Yes, text me," you agree to receive text messages from ${escapeHtml(studioNameForThisChat)} regarding your inquiry, lesson scheduling, and appointment reminders. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms.html" target="_blank" rel="noopener">Terms</a>.`,
         yesLabel: "Yes, text me",
         noLabel: "No thanks",
       };
