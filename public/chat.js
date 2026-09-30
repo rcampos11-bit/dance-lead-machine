@@ -100,7 +100,7 @@ function newConversation() {
   sessionId = null;
   lastDone = false;
   document.getElementById("messages").innerHTML = "";
-  botSay("Hi there! 👋 Thanks for reaching out to Dance Lead Machine™ Studio. I'm here to help — what brings you in today?");
+  botSay("Hi there! 👋 Thanks for reaching out to Country & West Coast Swing Dance. I'm here to help — what brings you in today?");
 }
 
 async function sendMessage(text) {
