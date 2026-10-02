@@ -708,8 +708,12 @@
           <label for="email">Email</label>
           <input type="email" id="email" name="email" placeholder="you@yourdomain.com" required>
         </div>
-        <div class="field">
-          <label for="password">Password</label>
+                <div class="field">
+          <label for="emailConfirm">Confirm email</label>
+          <input type="email" id="emailConfirm" name="emailConfirm" placeholder="Type your email again" required autocomplete="off">
+        </div>
+                <div class="field">  
+        <label for="password">Password</label>
           <input type="password" id="password" name="password" placeholder="Create a password" required>
         </div>
 
@@ -808,6 +812,10 @@
 
     if (!studioName || !email || !password) {
       showFormMessage('Please fill in every field.', true);
+      return;
+    }    var emailConfirm = document.getElementById('emailConfirm').value.trim();
+    if (email.toLowerCase() !== emailConfirm.toLowerCase()) {
+      showFormMessage('Your email addresses don\'t match. Please check for typos.', true);
       return;
     }
     if (password.length < 8) {
