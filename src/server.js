@@ -861,7 +861,7 @@ router.post("/api/forgot-password", async ({ req, res, body }) => {
     try {
       await sendEmail({
         to: email,
-        subject: `Reset your ${STUDIO_NAME} password`,
+                subject: `Reset your Dance Lead Machine password`,
         body: `Hi ${tenant.name},\n\nWe received a request to reset your password. Click the link below to set a new one — this link expires in 1 hour:\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
       });
       console.log(`Password reset email sent successfully to ${email}.`);
@@ -1081,7 +1081,9 @@ async function processDueSends() {
       if (step.channel === "text") {
         await sendSms({ to: lead.phone, body: step.body });
       } else if (step.channel === "email") {
-        await sendEmail({ to: lead.email, subject: `A message from ${STUDIO_NAME}`, body: step.body });
+                const leadTenant = db.prepare("SELECT name FROM tenants WHERE id = ?").get(lead.tenant_id);
+        const fromName = (leadTenant && leadTenant.name) || STUDIO_NAME;
+        await sendEmail({ to: lead.email, subject: `A message from ${fromName}`, body: step.body });
       } else {
         continue;
       }
