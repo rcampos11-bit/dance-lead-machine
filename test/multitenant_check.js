@@ -152,7 +152,7 @@ async function main() {
     });
     check("awaitingConsent block present", () => assert.ok(r.data.awaitingConsent));
     check("consent disclosure names the SECOND tenant's studio, not tenant 1's", () => {
-      assert.ok(r.data.awaitingConsent.disclosure.includes("Sarah's Salsa Studio"));
+      assert.ok(r.data.awaitingConsent.disclosure.includes("Sarah&#39;s Salsa Studio"));
       assert.ok(!r.data.awaitingConsent.disclosure.includes("Country & West Coast Swing Dance"));
     });
     check("consent studioName field matches too", () =>
