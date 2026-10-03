@@ -189,7 +189,7 @@ function generateSequenceSteps(lead, templateKey, apptDateObj, now = new Date())
         sortKey: date.toISOString().slice(0, 10),
         channel: s.channel,
         body: fillTemplate(s.body, lead),
-        status: date <= today ? "sent" : "scheduled",
+        status: date < today ? "sent" : "scheduled",
       };
     })
     .sort((a, b) => a.date - b.date);
