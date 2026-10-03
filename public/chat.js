@@ -10,6 +10,10 @@ let lastDone = false;
 // Empty string means "no slug given" — the server falls back to tenant 1
 // (this studio's own account) to keep existing links working unchanged.
 const tenantSlug = new URLSearchParams(window.location.search).get("t") || "";
+// Business name used in the greeting. Starts as the name in the page
+// header and is swapped for the right business's name by
+// loadTenantBranding() when the link has a ?t=<slug>.
+let studioName = document.getElementById("studioName").textContent;
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -100,7 +104,7 @@ function newConversation() {
   sessionId = null;
   lastDone = false;
   document.getElementById("messages").innerHTML = "";
-  botSay("Hi there! 👋 Thanks for reaching out to Country & West Coast Swing Dance. I'm here to help — what brings you in today?");
+  botSay(`Hi there! 👋 Thanks for reaching out to ${studioName}. I'm here to help — what brings you in today?`);
 }
 
 async function sendMessage(text) {
@@ -150,5 +154,28 @@ document.getElementById("input").addEventListener("keydown", (e) => {
 });
 document.getElementById("resetBtn").addEventListener("click", newConversation);
 
+// Loads the right business's name (and, for other studios, their
+// tagline and logo letter) so each customer's chat page shows THEIR
+// business, not ours. No ?t= in the link = page stays exactly as-is.
+async function loadTenantBranding() {
+  if (!tenantSlug) return;
+  try {
+    const res = await fetch(`/api/public/tenant/${encodeURIComponent(tenantSlug)}`);
+    if (!res.ok) return;
+    const t = await res.json();
+    studioName = t.name;
+    document.getElementById("studioName").textContent = t.name;
+    document.title = `${t.name} — Chat with Us`;
+    if (t.customBranding) {
+      document.getElementById("studioTagline").textContent = t.tagline;
+      document.getElementById("studioLogo").textContent = t.initial;
+      document.getElementById("termsLink").href = "/terms.html";
+      document.getElementById("privacyLink").href = "/privacy.html";
+    }
+  } catch (err) {
+    // Network hiccup — keep the default header rather than breaking the chat.
+  }
+}
+
 // ---- init ----
-newConversation();
+loadTenantBranding().finally(newConversation);
