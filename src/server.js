@@ -515,6 +515,36 @@ router.get("/site/:slug", async ({ res, params }) => {
 });
 
 // ============================================================
+// GET /api/public/tenant/:slug — public, no login. Gives the chat
+// page (index.html?t=<slug>) the business name to show in its
+// header, tab title and greeting, so every customer's chat page
+// shows THEIR business instead of tenant 1's.
+// ============================================================
+router.get("/api/public/tenant/:slug", async ({ res, params }) => {
+  const tenant = db.prepare("SELECT id, name FROM tenants WHERE slug = ?").get(params.slug);
+  if (!tenant) return sendJson(res, 404, { error: "This chat link isn't valid." });
+
+  let labels = [];
+  try {
+    labels = getCategories(db, tenant.id).filter((c) => c.active).map((c) => c.label);
+  } catch (err) {
+    // Pricing not set up yet — still show the name, with a generic tagline.
+  }
+  const tagline = labels.length
+    ? `Ask us anything — ${labels.slice(0, 3).join(", ").toLowerCase()}${labels.length > 3 ? ", and more" : ""}.`
+    : "Ask us anything about our dance classes and lessons.";
+
+  sendJson(res, 200, {
+    name: tenant.name,
+    tagline,
+    initial: (tenant.name || "?").trim().charAt(0).toUpperCase() || "?",
+    // Tenant 1 (our own studio) keeps its hand-written tagline, logo and
+    // footer links exactly as they are; every other business gets
+    // generated ones.
+    customBranding: tenant.id !== 1,
+  });
+});
+// ============================================================
 // Leads
 // ============================================================
 router.get("/api/leads", async ({ req, res }) => {
