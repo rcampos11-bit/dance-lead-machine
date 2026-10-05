@@ -852,6 +852,14 @@ async function loadBillingStatus() {
     const res = await fetch("/api/me");
     if (!res.ok) throw new Error("Couldn't load billing status.");
     const data = await res.json();
+        // Accounts with no Square subscription (the owner's own account, or a
+    // comped account) are never billed — say so plainly instead of "Active".
+    if (!data.hasSubscription) {
+      box.innerHTML = `<div class="status-pill status-active">No billing</div><p class="billing-detail">This account isn't connected to a paid subscription, so it's never charged.</p>`;
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = "No Subscription on File";
+      return;
+    } 
     const status = STATUS_LABELS[data.subscriptionStatus] || { text: data.subscriptionStatus || "Unknown", cls: "" };
     const trialLabel = formatDateLabel(data.trialEndsAt);
     const pendingCancelLabel = formatDateLabel(data.pendingCancelAt);
