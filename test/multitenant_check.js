@@ -56,6 +56,19 @@ seedDb.prepare(
   "INSERT OR IGNORE INTO pricing_categories (tenant_id, key, label, product, revenue, active, sort_order) VALUES (?, 'wedding', 'Wedding Dance', 'Salsa Wedding Package', 700, 1, 0)"
 ).run(secondTenantId);
 
+// A THIRD tenant with no texting set up — used to prove texting is
+// gated per business (no consent card, no text steps, email-only).
+const thirdTenantSlug = generateUniqueSlug(seedDb, "Tango Corner");
+const thirdTenantId = seedDb
+  .prepare("INSERT INTO tenants (name, admin_user, admin_password, account_type, slug) VALUES (?, 'tango@example.com', 'x', 'solo', ?)")
+  .run("Tango Corner", thirdTenantSlug).lastInsertRowid;
+seedDb.prepare(
+  "INSERT OR IGNORE INTO pricing_categories (tenant_id, key, label, product, revenue, active, sort_order) VALUES (?, 'wedding', 'Wedding Dance', 'Tango Wedding Package', 700, 1, 0)"
+).run(thirdTenantId);
+
+// Texting enabled for tenant 1 and the second tenant only (not the third).
+process.env.SMS_ENABLED_TENANT_IDS = `1,${secondTenantId}`;
+
 const { server } = require("../src/server");
 let passed = 0, failed = 0;
 function check(label, fn) {
@@ -158,6 +171,38 @@ async function main() {
     check("consent studioName field matches too", () =>
       assert.strictEqual(r.data.awaitingConsent.studioName, "Sarah's Salsa Studio")
     );
+  }
+
+  // ---- Scenario E: a business WITHOUT texting set up never gets SMS ----
+  console.log("\n== Business without texting: no consent card, email-only ==");
+  {
+    scriptQueue.push({
+      text: "Got it, thanks!",
+      toolCall: {
+        name: "Leo Park",
+        phone: "480-555-3333",
+        email: "leo@example.com",
+        category: "wedding",
+        notes: "Wedding in May.",
+        time_preference: "morning",
+      },
+    });
+    const r = await api("POST", "/api/chat", {
+      sessionId: "tenant-test-5",
+      message: "wedding help, I'm Leo, 480-555-3333, leo@example.com",
+      tenantSlug: thirdTenantSlug,
+    });
+    check("no SMS consent card for a business without texting", () => assert.ok(!r.data.awaitingConsent));
+    check("lead is saved right away", () => assert.ok(r.data.done && r.data.lead));
+    const { openDb: open2 } = require("../src/db");
+    const db2 = open2();
+    const lead = db2.prepare("SELECT * FROM leads WHERE session_id = ?").get("tenant-test-5");
+    check("lead belongs to the third business", () => assert.strictEqual(lead.tenant_id, thirdTenantId));
+    check("phone number is still saved", () => assert.strictEqual(lead.phone, "480-555-3333"));
+    const textSteps = db2.prepare(
+      "SELECT COUNT(*) n FROM sequence_steps ss JOIN sequences s ON s.id = ss.sequence_id WHERE s.lead_id = ? AND ss.channel = 'text'"
+    ).get(lead.id).n;
+    check("no text messages scheduled", () => assert.strictEqual(textSteps, 0));
   }
 
   console.log(`\n${passed} passed, ${failed} failed.`);
