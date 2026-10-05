@@ -958,8 +958,10 @@ async function applyAccountType() {
     const res = await fetch("/api/me");
     if (!res.ok) return;
     const data = await res.json();
-        if (data.studioName) {
+      if (data.studioName) {
       myStudioName = data.studioName;
+      document.getElementById("dashStudioName").textContent = data.studioName;
+      document.title = `${data.studioName} — Dance Lead Machine`;
       // Redo the greeting with the real name, unless a test chat already started.
       if (!sessionId) newConversation();
     } 
