@@ -179,6 +179,7 @@ addTenantCol("reset_token_hash", "reset_token_hash TEXT");
 addTenantCol("reset_token_expires_at", "reset_token_expires_at TEXT");
 addTenantCol("onboarding_completed", "onboarding_completed INTEGER NOT NULL DEFAULT 0");
 addTenantCol("chosen_offer_key", "chosen_offer_key TEXT");
+addTenantCol("sms_from_number", "sms_from_number TEXT");
 // Square doesn't cancel a subscription the instant it's asked to — it
 // schedules the cancellation for the end of the current trial/billing
 // period and keeps the subscription's status ACTIVE/TRIALING until
