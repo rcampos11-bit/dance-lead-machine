@@ -199,6 +199,30 @@ document.getElementById("exportAllBtn").addEventListener("click", () => {
 // Captured Leads sidebar
 // ============================================================
 let allLeads = [];
+// "Text / Call / Email" buttons on each lead card. These open the
+// instructor's OWN phone or email app with a message ready to send —
+// no Twilio needed, so every business can reach leads on day one.
+// The Text button is hidden if the lead tapped "No thanks" to texts.
+function contactButtons(lead) {
+  const first = (lead.name || "there").trim().split(" ")[0];
+  const interest = (lead.dance_interest || "dance lessons").toLowerCase();
+  const msg = `Hi ${first}, this is ${myStudioName}! Thanks for reaching out about ${interest}. When's a good time to chat?`;
+  const digits = (lead.phone || "").replace(/[^0-9+]/g, "");
+  const links = [];
+  if (digits && lead.sms_consent !== "no") {
+    links.push(`<a class="contact-btn" href="sms:${digits}?&body=${encodeURIComponent(msg)}">💬 Text</a>`);
+  }
+  if (digits) {
+    links.push(`<a class="contact-btn" href="tel:${digits}">📞 Call</a>`);
+  }
+  if (lead.email) {
+    const subject = `Your inquiry with ${myStudioName}`;
+    links.push(`<a class="contact-btn" href="mailto:${encodeURIComponent(lead.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}">✉️ Email</a>`);
+  }
+  const contactLine = [lead.phone, lead.email].filter(Boolean).map(escapeHtml).join(" · ");
+  return (contactLine ? `<div class="meta">☎️ ${contactLine}</div>` : "") +
+    (links.length ? `<div class="contact-actions">${links.join("")}</div>` : "");
+}
 
 async function refreshLeads() {
   const res = await fetch("/api/leads");
@@ -237,6 +261,7 @@ async function refreshLeads() {
     <div class="meta">${stageLine}</div>
     ${prefLine}
     ${smsLine}`;
+    ${contactButtons(lead)}
   el.appendChild(row);
 });
 }
