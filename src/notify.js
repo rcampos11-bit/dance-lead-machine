@@ -5,10 +5,10 @@
 // codebase's zero-deps philosophy.
 // ============================================================
 
-async function sendSms({ to, body }) {
+async function sendSms({ to, body, from: fromOverride }) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER;
+    const from = fromOverride || process.env.TWILIO_FROM_NUMBER;
   if (!sid || !token || !from) {
     throw new Error("Twilio is not configured (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER)");
   }
