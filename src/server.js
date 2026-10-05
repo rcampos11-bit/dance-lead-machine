@@ -1125,7 +1125,16 @@ async function processDueSends() {
           db.prepare("UPDATE sequence_steps SET status = 'skipped' WHERE id = ?").run(step.id);
           continue;
         }
-        await sendSms({ to: lead.phone, body: step.body });
+                // Each business texts from its OWN registered number. Only tenant 1
+        // may use the main TWILIO_FROM_NUMBER; any other business without
+        // a number of its own is skipped, never sent from ours.
+        const smsTenant = db.prepare("SELECT sms_from_number FROM tenants WHERE id = ?").get(step.tenant_id);
+        const ownNumber = smsTenant && smsTenant.sms_from_number;
+        if (!ownNumber && Number(step.tenant_id) !== 1) {
+          db.prepare("UPDATE sequence_steps SET status = 'skipped' WHERE id = ?").run(step.id);
+          continue;
+        }
+        await sendSms({ to: lead.phone, body: step.body, from: ownNumber || undefined });
       } else if (step.channel === "email") {
                 const leadTenant = db.prepare("SELECT name FROM tenants WHERE id = ?").get(lead.tenant_id);
         const fromName = (leadTenant && leadTenant.name) || STUDIO_NAME;
