@@ -560,3 +560,11 @@
     .composer button { flex: 1 1 auto; padding: 11px 16px; }
     .chat-card { height: 70vh; min-height: 460px; }
   }
+
+  /* ---- Text / Call / Email buttons on lead cards ---- */
+  .contact-actions{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;}
+  .contact-btn{
+    font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;
+    border:1px solid var(--border);background:#fff;color:var(--navy);text-decoration:none;
+  }
+  .contact-btn:hover{background:var(--navy);color:#fff;}
