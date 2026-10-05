@@ -20,7 +20,7 @@
     background: linear-gradient(135deg, var(--navy) 0%, #060a16 100%);
     color: var(--text);
     min-height: 100vh;
-    padding: 40px 24px;
+    padding: 40px 24px 140px; /* extra bottom room so phone browser bars don't cover buttons */
   }
   .wrap {
     max-width: 780px;
@@ -208,9 +208,13 @@
     color: var(--text);
     font-size: 13.5px;
   }
-  .pricing-row .pricing-label { flex: 1 1 140px; }
-  .pricing-row .pricing-product { flex: 2 1 200px; }
-  .pricing-row .pricing-revenue { flex: 0 1 90px; }
+  .pricing-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .pricing-field span { font-size: 11.5px; color: var(--muted, #9aa3b8); letter-spacing: .02em; }
+  .pricing-field input { width: 100%; box-sizing: border-box; }
+  .pricing-row .pricing-label-wrap { flex: 1 1 140px; }
+  .pricing-row .pricing-product-wrap { flex: 2 1 200px; }
+  .pricing-row .pricing-revenue-wrap { flex: 0 1 110px; }
+  .pricing-row .pricing-save-btn { align-self: flex-end; }
   .pricing-row .pricing-save-btn { padding: 9px 16px; font-size: 13px; }
   .pricing-saved {
     font-size: 12.5px;
@@ -295,7 +299,7 @@
     <div id="screen4" class="screen">
       <h1>⚠️ Before You Share Your Link</h1>
       <div class="warning-box">
-        <p>The prices and services below are just examples — not real, not yours. Right now, your AI receptionist will tell your customers these exact prices. Change every one so it matches what YOU actually charge.</p>
+        <p>The prices and services below are just examples — not real, not yours. Update each one to match what YOU actually offer and charge. Your AI receptionist uses the service names to understand what people are asking about, follow-up messages mention the product name, and the price feeds your revenue stats. It never quotes prices to customers.</p>
       </div>
 
       <div id="pricingLoading" class="loading">Loading your pricing...</div>
@@ -381,11 +385,11 @@
 
       // Include this tenant's own slug so leads from THIS QR code/link go
       // to THIS tenant's data, not tenant 1's, on a shared deployment.
-      const leadUrl = window.location.origin + '/index.html' + (tenantSlug ? '?t=' + encodeURIComponent(tenantSlug) : '');
+      const leadUrl = 'https://danceleadmachine.com/index.html' + (tenantSlug ? '?t=' + encodeURIComponent(tenantSlug) : '');
       document.getElementById('leadLink').value = leadUrl;
 
       if (tenantSlug) {
-        document.getElementById('sitePageLink').value = window.location.origin + '/site/' + encodeURIComponent(tenantSlug);
+        document.getElementById('sitePageLink').value = 'https://danceleadmachine.com/site/' + encodeURIComponent(tenantSlug);
         document.getElementById('sitePageRow').style.display = '';
       }
 
@@ -509,9 +513,9 @@
           const row = document.createElement('div');
           row.className = 'pricing-row';
           row.innerHTML = `
-            <input type="text" class="pricing-label" value="${escapeAttr(cat.label)}" placeholder="Service name">
-            <input type="text" class="pricing-product" value="${escapeAttr(cat.product)}" placeholder="What you offer">
-            <input type="number" class="pricing-revenue" value="${Number(cat.revenue || 0)}" min="0" step="1" placeholder="Price">
+            <label class="pricing-field pricing-label-wrap"><span>Service type</span><input type="text" class="pricing-label" value="${escapeAttr(cat.label)}" placeholder="e.g. Wedding Dance"></label>
+            <label class="pricing-field pricing-product-wrap"><span>Product name (used in follow-ups)</span><input type="text" class="pricing-product" value="${escapeAttr(cat.product)}" placeholder="e.g. private lessons"></label>
+            <label class="pricing-field pricing-revenue-wrap"><span>Typical price ($)</span><input type="number" class="pricing-revenue" value="${Number(cat.revenue || 0)}" min="0" step="1" placeholder="e.g. 425"></label>
             <button class="pricing-save-btn" data-id="${cat.id}">Save</button>
             <span class="pricing-saved" id="pricingSaved${cat.id}">Saved!</span>`;
           list.appendChild(row);
