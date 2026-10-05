@@ -547,3 +547,16 @@
   .confirm-text.confirm-success{color:#2E7D32;font-weight:bold;}
   .confirm-text.confirm-error{color:var(--hot);font-weight:bold;}
   .confirm-actions{display:flex;}
+
+  /* ---- Phone screens ---- */
+  /* Let grid columns shrink to the screen instead of their content. */
+  .layout > *, .fu-layout > *, .team-layout > * { min-width: 0; }
+  @media (max-width: 600px) {
+    .app { padding: 16px 12px 40px; }
+    .tabs { flex-wrap: wrap; gap: 2px; }
+    .tab-btn { padding: 8px 10px; font-size: 12.5px; }
+    .composer { flex-wrap: wrap; }
+    .composer input { flex: 1 1 100%; min-width: 0; font-size: 16px; } /* 16px stops iPhone zooming in */
+    .composer button { flex: 1 1 auto; padding: 11px 16px; }
+    .chat-card { height: 70vh; min-height: 460px; }
+  }
