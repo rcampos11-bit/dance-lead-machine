@@ -982,7 +982,12 @@ router.get("/api/me", async ({ req, res }) => {
   sendJson(res, 200, {
     studioName: tenant.name,
     accountType: tenant.account_type,
-    subscriptionStatus: tenant.subscription_status,
+        // Square reports a subscription as ACTIVE even during its free trial,
+    // so the webhook stores "active". Show "trialing" until the trial ends.
+    subscriptionStatus:
+      tenant.subscription_status === "active" && tenant.trial_ends_at && new Date(tenant.trial_ends_at) > new Date()
+        ? "trialing"
+        : tenant.subscription_status,
     trialEndsAt: tenant.trial_ends_at,
     hasSubscription: !!tenant.square_subscription_id,
     pendingCancelAt: tenant.pending_cancel_at,
