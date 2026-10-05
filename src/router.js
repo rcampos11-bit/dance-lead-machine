@@ -111,7 +111,12 @@ function sendText(res, status, text, contentType = "text/plain; charset=utf-8") 
 function serveStatic(rootDir) {
   return function (req, res) {
     let reqPath = decodeURIComponent(new URL(req.url, "http://x").pathname);
-    if (reqPath === "/") reqPath = "/index.html";
+    if (reqPath === "/") {
+      // On danceleadmachine.com, the home page is the marketing/signup
+      // page. Everywhere else (the onrender.com address) it stays the chat.
+      const host = (req.headers.host || "").split(":")[0].toLowerCase();
+      reqPath = host.endsWith("danceleadmachine.com") ? "/landing.html" : "/index.html";
+    }
     const filePath = path.join(rootDir, reqPath);
     if (!filePath.startsWith(rootDir)) {
       sendText(res, 403, "Forbidden");
