@@ -119,11 +119,16 @@ async function sendConsent(agreed) {
   }
 }
 
+// This account's own business name, loaded from /api/me in
+// applyAccountType(). Starts generic so the greeting never shows
+// another business's name.
+let myStudioName = "our studio";
+
 function newConversation() {
   sessionId = null;
   lastDone = false;
   document.getElementById("messages").innerHTML = "";
-  botSay("Hi there! 👋 Thanks for reaching out to Dance Lead Machine™ Studio. I'm here to help — what brings you in today?");
+  botSay(`Hi there! 👋 Thanks for reaching out to ${myStudioName}. I'm here to help — what brings you in today?`);
 }
 
 async function sendMessage(text) {
@@ -928,14 +933,19 @@ async function applyAccountType() {
     const res = await fetch("/api/me");
     if (!res.ok) return;
     const data = await res.json();
+        if (data.studioName) {
+      myStudioName = data.studioName;
+      // Redo the greeting with the real name, unless a test chat already started.
+      if (!sessionId) newConversation();
+    } 
     if (data.accountType === "solo") {
                   isSoloMode = true;
       const firstName = (data.studioName || "My").split(" ")[0];
-      document.getElementById("tabBtnTeam").innerHTML = `👤 ${escapeHtml(firstName)}'s Stats <span class="count-pill" id="teamCount">0</span>`;
+      document.getElementById("tabBtnTeam").innerHTML = `👤 My Stats <span class="count-pill" id="teamCount">0</span>`;
       const leftCol = document.getElementById("teamLeftCol");
       if (leftCol) leftCol.style.display = "none";
       const heading = document.getElementById("teamHeading");
-      if (heading) heading.innerHTML = `${escapeHtml(firstName)}'s Stats <span class="count-pill" id="teamRosterCount">0</span>`;
+      if (heading) heading.innerHTML = `My Stats <span class="count-pill" id="teamRosterCount">0</span>`;
     }
   } catch {
     // if this fails, just leave Studio Team visible — fail open, not closed
