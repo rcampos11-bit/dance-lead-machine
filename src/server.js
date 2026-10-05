@@ -38,6 +38,18 @@ const db = openDb();
 const router = new Router();
 const staticHandler = serveStatic(PUBLIC_DIR);
 
+// ---- SMS gating ----
+// Texting is only allowed for businesses that have their OWN registered
+// Twilio brand + campaign. Today that's only tenant 1. Every other
+// business gets email-only follow-ups until per-customer texting is set up.
+// Override with SMS_ENABLED_TENANT_IDS (comma-separated) in Render.
+function smsEnabledFor(tenantId) {
+  const ids = (process.env.SMS_ENABLED_TENANT_IDS || "1")
+    .split(",")
+    .map((x) => Number(x.trim()))
+    .filter(Boolean);
+  return ids.includes(Number(tenantId));
+}
 // ---- admin auth helpers ----
 function isAdminPath(pathname) {
   if (pathname === "/admin.html") return true;
@@ -278,7 +290,7 @@ const load = getLoadByInstructor(tenantId);
 
     const pending = { name: tc.name, email, phone, cat, instructor, notes, timePreference };
 
-    if (phone) {
+      if (phone && smsEnabledFor(tenantId)) {
       // A phone number was given — hold off writing the lead until they've
       // explicitly answered the SMS consent question. The chat.js UI renders
       // a real button for this; it is never inferred from free text.
@@ -1096,7 +1108,7 @@ async function processDueSends() {
   const today = new Date().toISOString().slice(0, 10);
   const dueSteps = db
     .prepare(
-      `SELECT ss.*, s.lead_id
+            `SELECT ss.*, s.lead_id, s.tenant_id
        FROM sequence_steps ss
        JOIN sequences s ON s.id = ss.sequence_id
        WHERE ss.status = 'scheduled' AND ss.send_date_sort <= ?`
@@ -1108,7 +1120,11 @@ async function processDueSends() {
     if (!lead) continue;
 
     try {
-      if (step.channel === "text") {
+    if (step.channel === "text") {
+                if (!smsEnabledFor(step.tenant_id)) {
+          db.prepare("UPDATE sequence_steps SET status = 'skipped' WHERE id = ?").run(step.id);
+          continue;
+        }
         await sendSms({ to: lead.phone, body: step.body });
       } else if (step.channel === "email") {
                 const leadTenant = db.prepare("SELECT name FROM tenants WHERE id = ?").get(lead.tenant_id);
