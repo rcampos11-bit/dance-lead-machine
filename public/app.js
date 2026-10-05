@@ -260,8 +260,8 @@ async function refreshLeads() {
     <div class="meta">${escapeHtml(lead.recommended_product || "")} · $${Number(lead.potential_revenue || 0).toLocaleString()} · Engagement ${lead.engagement}/5</div>
     <div class="meta">${stageLine}</div>
     ${prefLine}
-    ${smsLine}`;
-    ${contactButtons(lead)}
+    ${smsLine}
+    ${contactButtons(lead)}`;
   el.appendChild(row);
 });
 }
