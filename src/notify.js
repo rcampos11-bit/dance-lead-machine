@@ -33,7 +33,7 @@ async function sendSms({ to, body, from: fromOverride }) {
   return res.json();
 }
 
-async function sendEmail({ to, subject, body }) {
+async function sendEmail({ to, subject, body, fromName, replyTo }) {  
   const apiKey = process.env.SENDGRID_API_KEY;
   const from = process.env.SENDGRID_FROM_EMAIL;
   if (!apiKey || !from) {
@@ -49,7 +49,8 @@ async function sendEmail({ to, subject, body }) {
     },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: from },
+            from: fromName ? { email: from, name: fromName } : { email: from },
+      ...(replyTo ? { reply_to: { email: replyTo } } : {}),
       subject: subject || "A message from your studio",
       content: [{ type: "text/plain", value: body }],
     }),
