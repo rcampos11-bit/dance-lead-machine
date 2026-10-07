@@ -1141,9 +1141,10 @@ async function processDueSends() {
         }
         await sendSms({ to: lead.phone, body: step.body, from: ownNumber || undefined });
       } else if (step.channel === "email") {
-                const leadTenant = db.prepare("SELECT name FROM tenants WHERE id = ?").get(lead.tenant_id);
+        const leadTenant = db.prepare("SELECT name, admin_user FROM tenants WHERE id = ?").get(lead.tenant_id);
         const fromName = (leadTenant && leadTenant.name) || STUDIO_NAME;
-        await sendEmail({ to: lead.email, subject: `A message from ${fromName}`, body: step.body });
+        const replyTo = leadTenant && leadTenant.admin_user && leadTenant.admin_user.includes("@") ? leadTenant.admin_user : undefined;
+        await sendEmail({ to: lead.email, subject: `A message from ${fromName}`, body: step.body, fromName, replyTo });
       } else {
         continue;
       }
