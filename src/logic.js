@@ -106,7 +106,7 @@ const SEQUENCE_TEMPLATES = {
     label: "New Inquiry — No Response Yet",
     anchor: "today",
     steps: [
-      { offsetDays: 0, channel: "email", body: "Hi {firstName}, thanks so much for reaching out about {product}! We'd love to get you scheduled — just reply here or call us anytime that works for you." },
+      { offsetDays: 0, channel: "email", body: "Hi {firstName}, thanks so much for reaching out about {product}! We'd love to get you scheduled — just reply to this email and we'll find a time that works for you." },
       { offsetDays: 1, channel: "text", body: "Hi {firstName}, just checking in! Still happy to help you get started with {product} whenever you're ready." },
       { offsetDays: 3, channel: "email", body: "Hi {firstName} — still interested in {product}? We've got a few spots opening up this week and would love to have you in." },
       { offsetDays: 7, channel: "text", body: "Hi {firstName}, last check-in from us! Whenever the timing's right for {product}, we're here." },
