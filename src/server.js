@@ -1252,7 +1252,81 @@ async function handleSquareWebhook(req, res) {
   res.writeHead(200);
   res.end();
 }
+// ============================================================
+// Twilio inbound SMS — when a student texts back, forward their
+// reply to the studio owner's email so it never sits unseen in
+// the Twilio console. Handled outside the router (like Square)
+// because Twilio posts form-encoded data and signs the request.
+// ============================================================
+function verifyTwilioSignature(url, params, signatureHeader) {
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!token || !signatureHeader) return false;
+  const data = url + Object.keys(params).sort().map((k) => k + params[k]).join("");
+  const expected = crypto.createHmac("sha1", token).update(data).digest("base64");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signatureHeader);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
+function lastTenDigits(phone) {
+  return String(phone || "").replace(/\D/g, "").slice(-10);
+}
+
+async function handleTwilioInboundSms(req, res) {
+  const rawBody = await readRawBody(req);
+  const params = Object.fromEntries(new URLSearchParams(rawBody));
+  const url = `https://${req.headers.host}${req.url}`;
+
+  if (!verifyTwilioSignature(url, params, req.headers["x-twilio-signature"])) {
+    console.warn("Twilio inbound SMS: signature verification failed");
+    res.writeHead(403);
+    return res.end();
+  }
+
+  try {
+    const from = params.From || "";
+    const to = params.To || "";
+    const body = (params.Body || "").trim();
+    const fromDigits = lastTenDigits(from);
+
+    // Which studio does this number belong to? A studio's own number
+    // first, otherwise the shared number belongs to tenant 1.
+    const tenants = db.prepare("SELECT id, name, admin_user, sms_from_number FROM tenants").all();
+    let tenant = tenants.find((t) => t.sms_from_number && lastTenDigits(t.sms_from_number) === lastTenDigits(to));
+    if (!tenant) tenant = tenants.find((t) => t.id === 1);
+
+    // Most recent lead for this studio with a matching phone number.
+    const leads = db
+      .prepare("SELECT id, name, phone, email FROM leads WHERE tenant_id = ? ORDER BY id DESC")
+      .all(tenant ? tenant.id : 1);
+    const lead = leads.find((l) => lastTenDigits(l.phone) === fromDigits);
+
+    const ownerEmail = tenant && tenant.admin_user && tenant.admin_user.includes("@") ? tenant.admin_user : null;
+    if (ownerEmail && body) {
+      const who = lead ? `${lead.name} (${from})` : from;
+      const lines = [
+        `New text reply from ${who}:`,
+        "",
+        `"${body}"`,
+        "",
+        lead && lead.email ? `Their email: ${lead.email}` : null,
+        `Text or call them back at ${from}.`,
+      ].filter((x) => x !== null);
+      await sendEmail({
+        to: ownerEmail,
+        subject: `New text reply from ${lead ? lead.name : from}`,
+        body: lines.join("\n"),
+        fromName: "Dance Lead Machine",
+      });
+    }
+  } catch (err) {
+    console.warn("Twilio inbound SMS handling error:", err.message);
+  }
+
+  res.writeHead(200, { "content-type": "text/xml" });
+  res.end("<Response></Response>");
+}
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -1268,6 +1342,10 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/webhooks/square") {
     return handleSquareWebhook(req, res);
+  }
+  
+  if (req.method === "POST" && pathname === "/api/webhooks/twilio-sms") {
+    return handleTwilioInboundSms(req, res);
   }
 
   if (isAdminPath(pathname)) {
