@@ -77,7 +77,7 @@ function addConsentCard(consent) {
   div.className = "consent-card";
   div.innerHTML = `
     <p class="consent-question">${escapeHtml(consent.question)}</p>
-    <p class="consent-disclosure">${escapeHtml(consent.disclosure)}</p>
+    <p class="consent-disclosure">${consent.disclosure}</p>
     <div class="consent-actions">
       <button class="consent-btn yes" type="button">${escapeHtml(consent.yesLabel)}</button>
       <button class="consent-btn no" type="button">${escapeHtml(consent.noLabel)}</button>
