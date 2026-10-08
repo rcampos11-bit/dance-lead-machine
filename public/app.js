@@ -473,8 +473,8 @@ function renderInstructorCard(inst, instLeads, booked, revenue) {
   return card;
 }
 function renderSoloStats() {
-  document.getElementById("teamCount").textContent = allLeads.length ? 1 : 0;
-  document.getElementById("teamRosterCount").textContent = allLeads.length ? 1 : 0;
+  document.getElementById("teamCount").textContent = allLeads.length;
+  document.getElementById("teamRosterCount").textContent = allLeads.length;
 
   const totalRevenue = allLeads.reduce((sum, l) => sum + Number(l.potential_revenue || 0), 0);
   const byCategory = {};
