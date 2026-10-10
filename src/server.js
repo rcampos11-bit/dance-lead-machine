@@ -421,6 +421,12 @@ function finalizeLead(tenantId, sessionId, pending, smsConsent) {
 
   const templateKey = "new_inquiry_no_response";
   const steps = generateSequenceSteps(leadRow, templateKey, null);
+  const bookingUrl = bookingUrlFor(tenantId);
+  if (bookingUrl) {
+    for (const s of steps) {
+      if (s.channel === "email") s.body += ` Or skip the back-and-forth and grab a time here: ${bookingUrl}`;
+    }
+  }
   const insertSeq = db.prepare(
     "INSERT INTO sequences (tenant_id, lead_id, template_key, template_label) VALUES (?, ?, ?, ?)"
   );
@@ -444,6 +450,7 @@ function finalizeLead(tenantId, sessionId, pending, smsConsent) {
     pipelineStage: "Qualified",
     timePreference,
     smsConsent,
+    bookingUrl,
   };
 }
 function templateKeyLabel(key) {
@@ -1189,6 +1196,39 @@ router.post("/api/me/weekly-report", async ({ req, res, body }) => {
   const enabled = !!(body && body.enabled);
   db.prepare("UPDATE tenants SET weekly_report_enabled = ? WHERE id = ?").run(enabled ? 1 : 0, req.tenantId);
   sendJson(res, 200, { ok: true, enabled });
+});
+
+// ============================================================
+// Booking link — students pick their own lesson time
+// ============================================================
+function bookingUrlFor(tenantId) {
+  const t = db.prepare("SELECT booking_url FROM tenants WHERE id = ?").get(tenantId);
+  return (t && t.booking_url) || "";
+}
+// Accepts "mystudio.setmore.com" or a full link; returns a clean https
+// link, "" for blank (turns the feature off), or null if it isn't a link.
+function normalizeBookingUrl(raw) {
+  let s = String(raw || "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try {
+    const u = new URL(s);
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".") || /\s/.test(s) || s.length > 300) return null;
+    return u.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+router.get("/api/me/booking-link", async ({ req, res }) => {
+  sendJson(res, 200, { url: bookingUrlFor(req.tenantId) });
+});
+
+router.post("/api/me/booking-link", async ({ req, res, body }) => {
+  const url = normalizeBookingUrl(body && body.url);
+  if (url === null) return sendJson(res, 400, { error: "That doesn't look like a link. Try something like yourstudio.setmore.com" });
+  db.prepare("UPDATE tenants SET booking_url = ? WHERE id = ?").run(url || null, req.tenantId);
+  sendJson(res, 200, { ok: true, url });
 });
 
 
