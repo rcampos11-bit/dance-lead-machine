@@ -248,7 +248,57 @@ document.getElementById("leadList").addEventListener("click", async (e) => {
   await refreshLeads();
 });
 
+// ============================================================
+// Daily briefing — greeting + today's priorities
+// ============================================================
+async function loadBriefing() {
+  try {
+    const res = await fetch("/api/me/briefing");
+    if (!res.ok) return;
+    const b = await res.json();
+    document.getElementById("briefingGreeting").textContent =
+      `${b.greeting}${b.firstName ? ", " + b.firstName : ""}! 👋`;
+    document.getElementById("briefingCount").textContent = b.actionCount;
+    document.getElementById("briefingSub").textContent = b.actionCount
+      ? "Here's what needs your attention today, most important first:"
+      : "✅ You're all caught up — nothing urgent. Great time to post a video or ask a student for a review!";
+    const list = document.getElementById("briefingList");
+    list.innerHTML = "";
+    b.items.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = item.kind;
+      const digits = (item.phone || "").replace(/[^0-9+]/g, "");
+      const actions = [];
+      if (digits) actions.push(`<a href="tel:${digits}">📞 Call</a>`);
+      if (item.leadId && item.kind !== "checkin") actions.push(`<button data-contacted="${item.leadId}">✓ Mark Contacted</button>`);
+      li.innerHTML = `
+        <span class="b-icon">${item.icon}</span>
+        <div class="b-body">
+          <div class="b-title">${escapeHtml(item.title)}</div>
+          <div class="b-detail">${escapeHtml(item.detail)}</div>
+          ${actions.length ? `<div class="b-actions">${actions.join("")}</div>` : ""}
+        </div>`;
+      list.appendChild(li);
+    });
+  } catch {}
+}
+document.getElementById("briefingList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-contacted]");
+  if (!btn) return;
+  btn.disabled = true;
+  try {
+    await fetch(`/api/leads/${btn.dataset.contacted}/contacted`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contacted: true }),
+    });
+  } catch {}
+  await refreshLeads();
+});
+setInterval(loadBriefing, 5 * 60 * 1000);
+
 async function refreshLeads() {
+  loadBriefing();
   const res = await fetch("/api/leads");
   allLeads = await res.json();
   document.getElementById("leadCount").textContent = allLeads.length;
@@ -841,7 +891,7 @@ function switchTab(which) {
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
   document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
-  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); }
+  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); }
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
@@ -1061,6 +1111,30 @@ document.getElementById("remSaveBtn").addEventListener("click", async () => {
     }
   } catch {
     showToast("Couldn't save reminder settings.");
+  }
+  btn.disabled = false;
+});
+
+// ---- Settings: your first name (for the daily greeting) ----
+async function loadProfile() {
+  try {
+    const res = await fetch("/api/me/profile");
+    if (res.ok) document.getElementById("profileFirstName").value = (await res.json()).firstName || "";
+  } catch {}
+}
+document.getElementById("profileSaveBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("profileSaveBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/me/profile", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ firstName: document.getElementById("profileFirstName").value }),
+    });
+    showToast(res.ok ? "Name saved." : "Couldn't save your name.");
+    loadBriefing();
+  } catch {
+    showToast("Couldn't save your name.");
   }
   btn.disabled = false;
 });
