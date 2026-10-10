@@ -224,6 +224,30 @@ function contactButtons(lead) {
     (links.length ? `<div class="contact-actions">${links.join("")}</div>` : "");
 }
 
+function contactedButton(lead) {
+  if (lead.pipeline_stage === "Contacted") {
+    return `<button class="contacted-btn done" data-contacted="${lead.id}" data-undo="1" title="Tap to undo">✓ Contacted</button>`;
+  }
+  if (lead.pipeline_stage === "New Inquiry") {
+    return `<button class="contacted-btn" data-contacted="${lead.id}">✓ Mark Contacted</button>`;
+  }
+  return "";
+}
+
+document.getElementById("leadList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-contacted]");
+  if (!btn) return;
+  btn.disabled = true;
+  try {
+    await fetch(`/api/leads/${btn.dataset.contacted}/contacted`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contacted: !btn.dataset.undo }),
+    });
+  } catch {}
+  await refreshLeads();
+});
+
 async function refreshLeads() {
   const res = await fetch("/api/leads");
   allLeads = await res.json();
@@ -261,7 +285,8 @@ async function refreshLeads() {
     <div class="meta">${stageLine}</div>
     ${prefLine}
     ${smsLine}
-    ${contactButtons(lead)}`;
+    ${contactButtons(lead)}
+    ${contactedButton(lead)}`;
   el.appendChild(row);
 });
 }
@@ -816,7 +841,7 @@ function switchTab(which) {
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
   document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
-  if (which === "billing") loadBillingStatus();
+  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); }
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
@@ -988,6 +1013,58 @@ async function applyAccountType() {
 }
 
 // ---- onboarding redirect check ----
+// ============================================================
+// Settings tab — follow-up reminder toggle
+// ============================================================
+function updateRemState() {
+  const on = document.getElementById("remEnabled").checked;
+  document.getElementById("remState").textContent = on ? "On" : "Off";
+}
+async function loadReminderSettings() {
+  try {
+    const res = await fetch("/api/me/reminders");
+    if (!res.ok) return;
+    const r = await res.json();
+    document.getElementById("remEnabled").checked = r.enabled;
+    document.getElementById("rem6").checked = r.at6pm;
+    document.getElementById("rem10").checked = r.at10pm;
+    document.getElementById("remPhone").value = r.phone || "";
+    document.getElementById("remPhone").style.display = r.smsAvailable ? "" : "none";
+    document.getElementById("remNote").textContent =
+      (r.email ? `Emails go to ${r.email}. ` : "") +
+      (r.smsAvailable ? "Texts go to the number above." : "Text reminders aren't set up for this account yet, so you'll get email reminders.");
+    updateRemState();
+  } catch {}
+}
+document.getElementById("remEnabled").addEventListener("change", updateRemState);
+document.getElementById("remSaveBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("remSaveBtn");
+  const payload = {
+    enabled: document.getElementById("remEnabled").checked,
+    at6pm: document.getElementById("rem6").checked,
+    at10pm: document.getElementById("rem10").checked,
+    phone: document.getElementById("remPhone").value,
+  };
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/me/reminders", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || "Couldn't save reminder settings.");
+    } else {
+      showToast(payload.enabled ? "Reminders saved — they're on." : "Reminders saved — they're off.");
+      loadReminderSettings();
+    }
+  } catch {
+    showToast("Couldn't save reminder settings.");
+  }
+  btn.disabled = false;
+});
+
 async function checkOnboarding() {
   try {
     const res = await fetch("/api/onboarding/status");
