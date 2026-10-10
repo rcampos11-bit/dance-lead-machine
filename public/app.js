@@ -234,7 +234,31 @@ function contactedButton(lead) {
   return "";
 }
 
+function bookedButton(lead) {
+  if (lead.pipeline_stage === "Appointment Booked") {
+    return `<button class="booked-btn done" data-booked="${lead.id}" data-undo="1" title="Tap to undo">🎉 Booked</button>`;
+  }
+  if (["New Inquiry", "Qualified", "Contacted"].includes(lead.pipeline_stage)) {
+    return `<button class="booked-btn" data-booked="${lead.id}">🎉 Mark Booked</button>`;
+  }
+  return "";
+}
+
 document.getElementById("leadList").addEventListener("click", async (e) => {
+  const bookBtn = e.target.closest("[data-booked]");
+  if (bookBtn) {
+    bookBtn.disabled = true;
+    try {
+      await fetch(`/api/leads/${bookBtn.dataset.booked}/booked`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ booked: !bookBtn.dataset.undo }),
+      });
+      if (!bookBtn.dataset.undo) showToast("🎉 Nice! Added to your scoreboard.");
+    } catch {}
+    await refreshLeads();
+    return;
+  }
   const btn = e.target.closest("[data-contacted]");
   if (!btn) return;
   btn.disabled = true;
@@ -297,8 +321,30 @@ document.getElementById("briefingList").addEventListener("click", async (e) => {
 });
 setInterval(loadBriefing, 5 * 60 * 1000);
 
+// ============================================================
+// Scoreboard — this month's leads, bookings and money booked
+// ============================================================
+async function loadScoreboard() {
+  try {
+    const res = await fetch("/api/me/scoreboard");
+    if (!res.ok) return;
+    const s = await res.json();
+    document.getElementById("scoreTitle").textContent = `📈 Your ${s.monthName} Scoreboard`;
+    document.getElementById("scoreLeads").textContent = s.newLeads;
+    document.getElementById("scoreBooked").textContent = s.booked;
+    document.getElementById("scoreMoney").textContent = "$" + Number(s.money).toLocaleString();
+    document.getElementById("scoreNote").textContent =
+      s.paidFor >= 1
+        ? `🎉 Dance Lead Machine costs $${s.planCost}/month. It has paid for itself ${s.paidFor}x this month!`
+        : s.booked > 0
+        ? `$${Number(s.money).toLocaleString()} booked so far this month. Keep going!`
+        : `Tap "🎉 Mark Booked" on a lead when they sign up, and watch this grow.`;
+  } catch {}
+}
+
 async function refreshLeads() {
   loadBriefing();
+  loadScoreboard();
   const res = await fetch("/api/leads");
   allLeads = await res.json();
   document.getElementById("leadCount").textContent = allLeads.length;
@@ -336,7 +382,7 @@ async function refreshLeads() {
     ${prefLine}
     ${smsLine}
     ${contactButtons(lead)}
-    ${contactedButton(lead)}`;
+    ${contactedButton(lead)}${bookedButton(lead)}`;
   el.appendChild(row);
 });
 }
@@ -891,7 +937,7 @@ function switchTab(which) {
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
   document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
-  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); }
+  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); loadWeeklySetting(); }
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
@@ -1113,6 +1159,32 @@ document.getElementById("remSaveBtn").addEventListener("click", async () => {
     showToast("Couldn't save reminder settings.");
   }
   btn.disabled = false;
+});
+
+// ---- Settings: Monday weekly report email (saves as soon as you flip it) ----
+async function loadWeeklySetting() {
+  try {
+    const res = await fetch("/api/me/weekly-report");
+    if (!res.ok) return;
+    const w = await res.json();
+    document.getElementById("weeklyEnabled").checked = w.enabled;
+    document.getElementById("weeklyState").textContent = w.enabled ? "On" : "Off";
+    document.getElementById("weeklyNote").textContent = w.email ? `Sent to ${w.email}.` : "";
+  } catch {}
+}
+document.getElementById("weeklyEnabled").addEventListener("change", async (e) => {
+  const enabled = e.target.checked;
+  document.getElementById("weeklyState").textContent = enabled ? "On" : "Off";
+  try {
+    const res = await fetch("/api/me/weekly-report", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    showToast(res.ok ? (enabled ? "Weekly report is on." : "Weekly report is off.") : "Couldn't save that setting.");
+  } catch {
+    showToast("Couldn't save that setting.");
+  }
 });
 
 // ---- Settings: your first name (for the daily greeting) ----
