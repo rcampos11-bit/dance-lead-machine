@@ -1055,6 +1055,142 @@ router.post("/api/leads/:id/contacted", async ({ req, res, params, body }) => {
   sendJson(res, 200, { ok: true, pipeline_stage: stage });
 });
 
+// ============================================================
+// Scoreboard — "Mark Booked" + this month's results
+// ============================================================
+router.post("/api/leads/:id/booked", async ({ req, res, params, body }) => {
+  const lead = db.prepare("SELECT id, pipeline_stage, potential_revenue FROM leads WHERE id = ? AND tenant_id = ?").get(params.id, req.tenantId);
+  if (!lead) return sendJson(res, 404, { error: "Lead not found" });
+  if (body && body.booked === false) {
+    if (lead.pipeline_stage !== "Appointment Booked") return sendJson(res, 200, { ok: true, pipeline_stage: lead.pipeline_stage });
+    db.prepare("UPDATE leads SET pipeline_stage = 'Contacted', booked_at = NULL, booked_amount = NULL WHERE id = ?").run(lead.id);
+    return sendJson(res, 200, { ok: true, pipeline_stage: "Contacted" });
+  }
+  let amount = body && body.amount != null ? Number(body.amount) : NaN;
+  if (!Number.isFinite(amount) || amount < 0) amount = Number(lead.potential_revenue) || 0;
+  db.prepare(
+    "UPDATE leads SET pipeline_stage = 'Appointment Booked', booked_at = datetime('now'), booked_amount = ?, last_contact = datetime('now') WHERE id = ?"
+  ).run(amount, lead.id);
+  sendJson(res, 200, { ok: true, pipeline_stage: "Appointment Booked", amount });
+});
+
+const PLAN_COST = { solo: 29, studio: 99 };
+function planCostFor(t) {
+  return PLAN_COST[String((t && t.account_type) || "").toLowerCase()] || 29;
+}
+function safeZone(tz) {
+  try { localClock(tz || "America/Phoenix", new Date()); return tz || "America/Phoenix"; } catch (e) { return "America/Phoenix"; }
+}
+// Counts new leads, bookings and money booked for the local days that
+// pass inRange(YYYY-MM-DD). Dates in the DB are UTC; we convert each to
+// the studio's own calendar day so "this month" matches their wall clock.
+function leadStats(tenantId, tz, inRange) {
+  const rows = db.prepare("SELECT date_added, booked_at, booked_amount FROM leads WHERE tenant_id = ?").all(tenantId);
+  const day = (s) => (s ? localClock(tz, new Date(String(s).replace(" ", "T") + "Z")).date : null);
+  let newLeads = 0, booked = 0, money = 0;
+  for (const r of rows) {
+    if (inRange(day(r.date_added))) newLeads++;
+    if (r.booked_at && inRange(day(r.booked_at))) { booked++; money += Number(r.booked_amount) || 0; }
+  }
+  return { newLeads, booked, money: Math.round(money) };
+}
+function waitingCount(tenantId) {
+  return db.prepare("SELECT COUNT(*) AS n FROM leads WHERE tenant_id = ? AND pipeline_stage IN ('New Inquiry', 'Qualified')").get(tenantId).n;
+}
+
+function buildScoreboard(tenantId, now = new Date()) {
+  const t = db.prepare("SELECT account_type, timezone FROM tenants WHERE id = ?").get(tenantId) || {};
+  const tz = safeZone(t.timezone);
+  const month = localClock(tz, now).date.slice(0, 7);
+  const s = leadStats(tenantId, tz, (d) => !!d && d.slice(0, 7) === month);
+  const planCost = planCostFor(t);
+  return {
+    monthName: new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "long" }).format(now),
+    ...s,
+    waiting: waitingCount(tenantId),
+    planCost,
+    paidFor: Math.floor(s.money / planCost),
+  };
+}
+
+router.get("/api/me/scoreboard", async ({ req, res }) => {
+  sendJson(res, 200, buildScoreboard(req.tenantId));
+});
+
+// ============================================================
+// Weekly report — Monday 8 AM email with last week's results
+// ============================================================
+function buildWeeklyReport(tenantId, now = new Date()) {
+  const t = db.prepare("SELECT name, owner_first_name, account_type, timezone FROM tenants WHERE id = ?").get(tenantId) || {};
+  const tz = safeZone(t.timezone);
+  const days = new Set();
+  for (let i = 1; i <= 7; i++) days.add(localClock(tz, new Date(now - i * 86400000)).date);
+  const week = leadStats(tenantId, tz, (d) => days.has(d));
+  const sb = buildScoreboard(tenantId, now);
+  const $ = (n) => `$${Number(n).toLocaleString()}`;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const dash = "https://danceleadmachine.com/admin.html";
+
+  const lines = [
+    `Hi ${t.owner_first_name || "there"},`,
+    "",
+    `Here's what Dance Lead Machine did for ${t.name || "your studio"} last week:`,
+    "",
+    `• New leads: ${week.newLeads}`,
+    `• Booked: ${week.booked}`,
+    `• Money booked: ${$(week.money)}`,
+    "",
+    `${sb.monthName} so far: ${plural(sb.newLeads, "new lead")}, ${sb.booked} booked, ${$(sb.money)} booked.`,
+  ];
+  if (sb.paidFor >= 1) lines.push(`Dance Lead Machine costs ${$(sb.planCost)}/month, so it has already paid for itself ${sb.paidFor}x this month.`);
+  if (sb.waiting > 0) lines.push("", `⏰ ${plural(sb.waiting, "lead")} ${sb.waiting === 1 ? "is" : "are"} still waiting for you to reach out.`);
+  if (week.newLeads === 0) lines.push("", "Quiet week. Tip: share your chat link or QR code on Instagram, or ask a happy student for a Google review.");
+  lines.push(
+    "",
+    `Open your dashboard: ${dash}`,
+    "",
+    `Tip: tap "Mark Booked" when a lead signs up, so it counts here.`,
+    "You can turn this weekly email off anytime in the Settings tab."
+  );
+  return {
+    subject: `Your week: ${plural(week.newLeads, "new lead")}, ${week.booked} booked, ${$(week.money)}`,
+    body: lines.join("\n"),
+    week,
+  };
+}
+
+async function processWeeklyReports(now = new Date()) {
+  const tenants = db.prepare("SELECT id, admin_user, timezone, weekly_report_last_sent FROM tenants WHERE weekly_report_enabled = 1").all();
+  for (const t of tenants) {
+    if (!t.admin_user || !t.admin_user.includes("@")) continue;
+    const clock = localClock(safeZone(t.timezone), now);
+    if (clock.weekday !== "Mon" || clock.hour !== 8) continue;
+    if (t.weekly_report_last_sent === clock.date) continue;
+    // Claim this Monday first so a slow or failed send never double-sends.
+    db.prepare("UPDATE tenants SET weekly_report_last_sent = ? WHERE id = ?").run(clock.date, t.id);
+    const r = buildWeeklyReport(t.id, now);
+    try {
+      await sendEmail({ to: t.admin_user, subject: r.subject, body: r.body, fromName: "Dance Lead Machine" });
+    } catch (e) {
+      console.warn(`Weekly report email failed for tenant ${t.id}:`, e.message);
+    }
+  }
+}
+
+router.get("/api/me/weekly-report", async ({ req, res }) => {
+  const t = db.prepare("SELECT admin_user, weekly_report_enabled FROM tenants WHERE id = ?").get(req.tenantId);
+  sendJson(res, 200, {
+    enabled: !!t.weekly_report_enabled,
+    email: t.admin_user && t.admin_user.includes("@") ? t.admin_user : "",
+  });
+});
+
+router.post("/api/me/weekly-report", async ({ req, res, body }) => {
+  const enabled = !!(body && body.enabled);
+  db.prepare("UPDATE tenants SET weekly_report_enabled = ? WHERE id = ?").run(enabled ? 1 : 0, req.tenantId);
+  sendJson(res, 200, { ok: true, enabled });
+});
+
 
 // ============================================================
 // Daily briefing — "Good morning, Robert" + today's priorities
@@ -1273,10 +1409,10 @@ router.post("/api/onboarding/complete", async ({ req, res }) => {
 // ============================================================
 function localClock(timeZone, now) {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23", weekday: "short",
   }).formatToParts(now);
   const get = (t) => parts.find((p) => p.type === t).value;
-  return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")) };
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), weekday: get("weekday") };
 }
 
 async function processReminders(now = new Date()) {
@@ -1619,8 +1755,9 @@ if (require.main === module) {
     setInterval(() => {
       processDueSends().catch((e) => console.warn("processDueSends error:", e.message));
       processReminders().catch((e) => console.warn("processReminders error:", e.message));
+      processWeeklyReports().catch((e) => console.warn("processWeeklyReports error:", e.message));
     }, 5 * 60 * 1000);
   });
 }
 
-module.exports = { server, db, processReminders, buildBriefing };
+module.exports = { server, db, processReminders, buildBriefing, buildScoreboard, buildWeeklyReport, processWeeklyReports };
