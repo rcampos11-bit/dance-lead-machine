@@ -1047,10 +1047,10 @@ router.post("/api/leads/:id/contacted", async ({ req, res, params, body }) => {
   if (!lead) return sendJson(res, 404, { error: "Lead not found" });
   // Only toggles between New Inquiry and Contacted — never overwrites a
   // later stage like "Appointment Booked".
-  if (!["New Inquiry", "Contacted"].includes(lead.pipeline_stage)) {
+    if (!["New Inquiry", "Qualified", "Contacted"].includes(lead.pipeline_stage)) {
     return sendJson(res, 200, { ok: true, pipeline_stage: lead.pipeline_stage });
   }
-  const stage = body && body.contacted === false ? "New Inquiry" : "Contacted";
+  const stage = body && body.contacted === false ? "Qualified" : "Contacted";
   db.prepare("UPDATE leads SET pipeline_stage = ?, last_contact = datetime('now') WHERE id = ?").run(stage, lead.id);
   sendJson(res, 200, { ok: true, pipeline_stage: stage });
 });
@@ -1189,7 +1189,7 @@ async function processReminders(now = new Date()) {
     db.prepare("UPDATE tenants SET reminder_last_sent = ? WHERE id = ?").run(key, t.id);
 
     const leads = db
-      .prepare("SELECT name, phone, email, dance_interest FROM leads WHERE tenant_id = ? AND pipeline_stage = 'New Inquiry' ORDER BY id DESC")
+      .prepare("SELECT name, phone, email, dance_interest FROM leads WHERE tenant_id = ? AND pipeline_stage IN ('New Inquiry', 'Qualified') ORDER BY id DESC")
       .all(t.id);
     if (leads.length === 0) continue;
 
