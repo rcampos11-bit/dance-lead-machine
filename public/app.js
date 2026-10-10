@@ -228,7 +228,7 @@ function contactedButton(lead) {
   if (lead.pipeline_stage === "Contacted") {
     return `<button class="contacted-btn done" data-contacted="${lead.id}" data-undo="1" title="Tap to undo">✓ Contacted</button>`;
   }
-  if (lead.pipeline_stage === "New Inquiry") {
+  if (lead.pipeline_stage === "New Inquiry" || lead.pipeline_stage === "Qualified") {
     return `<button class="contacted-btn" data-contacted="${lead.id}">✓ Mark Contacted</button>`;
   }
   return "";
