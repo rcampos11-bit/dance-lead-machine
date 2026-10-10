@@ -1,4 +1,4 @@
-  :root{
+:root{
     --navy:#1F2A44;
     --navy-light:#3C4B6E;
     --gold:#C9A227;
@@ -568,3 +568,17 @@
     border:1px solid var(--border);background:#fff;color:var(--navy);text-decoration:none;
   }
   .contact-btn:hover{background:var(--navy);color:#fff;}
+
+  /* Follow-up reminders: toggle switch + Mark Contacted */
+  .switch-row{display:flex;align-items:center;gap:10px;margin:4px 0 12px;font-size:13px;color:var(--navy);cursor:pointer;}
+  .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:#c9ced8;border-radius:999px;transition:.2s;}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+  .switch input:checked + .slider{background:#2e9d5b;}
+  .switch input:checked + .slider:before{transform:translateX(18px);}
+  .rem-state{font-size:11px;color:var(--muted);}
+  .rem-times{display:flex;gap:16px;margin-bottom:12px;font-size:12.5px;color:var(--navy);}
+  .rem-times label{display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .contacted-btn{font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid #2e9d5b;background:#fff;color:#2e9d5b;cursor:pointer;margin-top:8px;font-family:inherit;}
+  .contacted-btn.done{background:#2e9d5b;color:#fff;}
