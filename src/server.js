@@ -1055,6 +1055,113 @@ router.post("/api/leads/:id/contacted", async ({ req, res, params, body }) => {
   sendJson(res, 200, { ok: true, pipeline_stage: stage });
 });
 
+
+// ============================================================
+// Daily briefing — "Good morning, Robert" + today's priorities
+// ============================================================
+function minutesSince(sqliteUtc, now) {
+  if (!sqliteUtc) return 0;
+  const t = Date.parse(String(sqliteUtc).replace(" ", "T") + "Z");
+  return Number.isNaN(t) ? 0 : Math.max(0, Math.round((now - t) / 60000));
+}
+function friendlyAge(sqliteUtc, now, timeZone) {
+  const mins = minutesSince(sqliteUtc, now);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const t = new Date(String(sqliteUtc).replace(" ", "T") + "Z");
+  const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(t);
+  const thenDay = localClock(timeZone, t).date;
+  const today = localClock(timeZone, now).date;
+  const yest = localClock(timeZone, new Date(now - 86400000)).date;
+  if (thenDay === today) return `today at ${time}`;
+  if (thenDay === yest) return `yesterday at ${time}`;
+  const days = Math.max(2, Math.round(mins / 1440));
+  return `${days} days ago`;
+}
+
+function buildBriefing(tenantId, now = new Date()) {
+  const t = db.prepare("SELECT owner_first_name, timezone FROM tenants WHERE id = ?").get(tenantId) || {};
+  let tz = t.timezone || "America/Phoenix";
+  let clock;
+  try { clock = localClock(tz, now); } catch (e) { tz = "America/Phoenix"; clock = localClock(tz, now); }
+  const greeting = clock.hour < 12 ? "Good morning" : clock.hour < 17 ? "Good afternoon" : "Good evening";
+  const items = [];
+  const money = (n) => (Number(n) > 0 ? ` ($${Number(n).toLocaleString()})` : "");
+
+  const waiting = db
+    .prepare("SELECT id, name, phone, dance_interest, potential_revenue, date_added FROM leads WHERE tenant_id = ? AND pipeline_stage IN ('New Inquiry', 'Qualified')")
+    .all(tenantId)
+    .map((l) => ({ ...l, mins: minutesSince(l.date_added, now) }));
+  const fresh = waiting.filter((l) => l.mins < 60).sort((a, b) => a.mins - b.mins);
+  const older = waiting.filter((l) => l.mins >= 60).sort((a, b) => {
+    const dayA = Math.floor(a.mins / 1440), dayB = Math.floor(b.mins / 1440);
+    if (dayA !== dayB) return dayB - dayA; // oldest day first
+    return (b.potential_revenue || 0) - (a.potential_revenue || 0); // then highest value
+  });
+  for (const l of fresh) {
+    items.push({
+      kind: "hot", icon: "🔥", leadId: l.id, phone: l.phone || "",
+      title: `Call ${l.name || "your new lead"} now`,
+      detail: `${l.dance_interest || "New inquiry"}${money(l.potential_revenue)}, came in ${friendlyAge(l.date_added, now, tz)}. Leads go cold fast.`,
+    });
+  }
+  for (const l of older) {
+    items.push({
+      kind: "waiting", icon: "⏰", leadId: l.id, phone: l.phone || "",
+      title: `${l.name || "A lead"} is still waiting`,
+      detail: `${l.dance_interest || "New inquiry"}${money(l.potential_revenue)}, came in ${friendlyAge(l.date_added, now, tz)}.`,
+    });
+  }
+
+  const stale = db
+    .prepare("SELECT id, name, phone, dance_interest, last_contact FROM leads WHERE tenant_id = ? AND pipeline_stage = 'Contacted' AND last_contact <= datetime(?, '-3 days') ORDER BY last_contact ASC")
+    .all(tenantId, now.toISOString().slice(0, 19).replace("T", " "));
+  for (const l of stale) {
+    items.push({
+      kind: "checkin", icon: "📞", leadId: l.id, phone: l.phone || "",
+      title: `Check in with ${l.name || "a lead"}`,
+      detail: `You contacted them ${friendlyAge(l.last_contact, now, tz)} but they haven't booked yet.`,
+    });
+  }
+
+  const today = now.toISOString().slice(0, 10);
+  const sends = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM sequence_steps ss JOIN sequences s ON s.id = ss.sequence_id
+       WHERE s.tenant_id = ? AND ss.status = 'scheduled' AND ss.send_date_sort <= ?`
+    )
+    .get(tenantId, today).n;
+  if (sends > 0) {
+    items.push({
+      kind: "info", icon: "📨",
+      title: `${sends} automatic follow-up${sends === 1 ? "" : "s"} go${sends === 1 ? "es" : ""} out today`,
+      detail: "No action needed — Dance Lead Machine sends these for you.",
+    });
+  }
+
+  return {
+    greeting,
+    firstName: t.owner_first_name || "",
+    items,
+    actionCount: items.filter((i) => i.kind !== "info").length,
+  };
+}
+
+router.get("/api/me/briefing", async ({ req, res }) => {
+  sendJson(res, 200, buildBriefing(req.tenantId));
+});
+
+router.get("/api/me/profile", async ({ req, res }) => {
+  const t = db.prepare("SELECT owner_first_name FROM tenants WHERE id = ?").get(req.tenantId);
+  sendJson(res, 200, { firstName: (t && t.owner_first_name) || "" });
+});
+
+router.post("/api/me/profile", async ({ req, res, body }) => {
+  const firstName = String((body && body.firstName) || "").trim().slice(0, 40);
+  db.prepare("UPDATE tenants SET owner_first_name = ? WHERE id = ?").run(firstName || null, req.tenantId);
+  sendJson(res, 200, { ok: true, firstName });
+});
+
 router.post("/api/me/cancel-subscription", async ({ req, res }) => {
   const tenant = db
     .prepare("SELECT id, subscription_status, square_subscription_id, pending_cancel_at FROM tenants WHERE id = ?")
@@ -1516,4 +1623,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server, db, processReminders };
+module.exports = { server, db, processReminders, buildBriefing };
