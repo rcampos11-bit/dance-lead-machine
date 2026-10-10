@@ -62,7 +62,8 @@ const prefRow = lead.timePreference
       <tr><td class="k">Potential Revenue</td><td>$${Number(lead.potentialRevenue).toLocaleString()}</td></tr>
       ${stageRow}
 ${prefRow}
-    </table>`;
+    </table>
+    ${lead.bookingUrl ? `<a class="book-btn" href="${escapeHtml(lead.bookingUrl)}" target="_blank" rel="noopener">📅 Pick a time for your first lesson</a><div class="meta" style="margin-top:6px;">👆 Students see this button so they can book themselves.</div>` : ""}`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -937,7 +938,7 @@ function switchTab(which) {
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
   document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
-  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); loadWeeklySetting(); }
+  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); loadWeeklySetting(); loadBookingLink(); }
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
@@ -1157,6 +1158,44 @@ document.getElementById("remSaveBtn").addEventListener("click", async () => {
     }
   } catch {
     showToast("Couldn't save reminder settings.");
+  }
+  btn.disabled = false;
+});
+
+// ---- Settings: booking link (Setmore, Square, Calendly...) ----
+function showBookingTest(url) {
+  const a = document.getElementById("bookingTest");
+  a.href = url || "#";
+  a.style.display = url ? "" : "none";
+}
+async function loadBookingLink() {
+  try {
+    const res = await fetch("/api/me/booking-link");
+    if (!res.ok) return;
+    const { url } = await res.json();
+    document.getElementById("bookingUrl").value = url || "";
+    showBookingTest(url);
+  } catch {}
+}
+document.getElementById("bookingSaveBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("bookingSaveBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/me/booking-link", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: document.getElementById("bookingUrl").value }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || "Couldn't save your booking link.");
+    } else {
+      document.getElementById("bookingUrl").value = data.url || "";
+      showBookingTest(data.url);
+      showToast(data.url ? "Booking link saved. Students will see it now." : "Booking link removed.");
+    }
+  } catch {
+    showToast("Couldn't save your booking link.");
   }
   btn.disabled = false;
 });
