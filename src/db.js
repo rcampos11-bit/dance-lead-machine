@@ -188,6 +188,15 @@ addTenantCol("sms_from_number", "sms_from_number TEXT");
 // through <date>" instead of misleadingly showing plain "Active" with
 // no sign that anything was scheduled.
 addTenantCol("pending_cancel_at", "pending_cancel_at TEXT");
+
+// Follow-up reminders: a daily text + email nudge (6 PM and/or 10 PM in
+// the studio's own time zone) listing leads still marked "New Inquiry".
+addTenantCol("reminders_enabled", "reminders_enabled INTEGER NOT NULL DEFAULT 0");
+addTenantCol("reminder_6pm", "reminder_6pm INTEGER NOT NULL DEFAULT 1");
+addTenantCol("reminder_10pm", "reminder_10pm INTEGER NOT NULL DEFAULT 1");
+addTenantCol("reminder_phone", "reminder_phone TEXT");
+addTenantCol("timezone", "timezone TEXT NOT NULL DEFAULT 'America/Phoenix'");
+addTenantCol("reminder_last_sent", "reminder_last_sent TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
