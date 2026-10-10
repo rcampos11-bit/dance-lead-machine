@@ -1004,6 +1004,57 @@ router.get("/api/me", async ({ req, res }) => {
 // set it here immediately so the dashboard reflects it right away
 // without waiting on webhook delivery.
 // ============================================================
+
+// ============================================================
+// Follow-up reminders — settings + "Mark Contacted"
+// ============================================================
+function normalizeUsPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length === 10) return "+1" + digits;
+  if (digits.length === 11 && digits.startsWith("1")) return "+" + digits;
+  return null;
+}
+
+router.get("/api/me/reminders", async ({ req, res }) => {
+  const t = db
+    .prepare("SELECT admin_user, reminders_enabled, reminder_6pm, reminder_10pm, reminder_phone FROM tenants WHERE id = ?")
+    .get(req.tenantId);
+  sendJson(res, 200, {
+    enabled: !!t.reminders_enabled,
+    at6pm: !!t.reminder_6pm,
+    at10pm: !!t.reminder_10pm,
+    phone: t.reminder_phone || "",
+    email: t.admin_user && t.admin_user.includes("@") ? t.admin_user : "",
+    smsAvailable: smsEnabledFor(req.tenantId),
+  });
+});
+
+router.post("/api/me/reminders", async ({ req, res, body }) => {
+  body = body || {};
+  let phone = null;
+  if (body.phone && String(body.phone).trim()) {
+    phone = normalizeUsPhone(body.phone);
+    if (!phone) return sendJson(res, 400, { error: "Please enter a 10-digit US phone number." });
+  }
+  db.prepare(
+    "UPDATE tenants SET reminders_enabled = ?, reminder_6pm = ?, reminder_10pm = ?, reminder_phone = ? WHERE id = ?"
+  ).run(body.enabled ? 1 : 0, body.at6pm ? 1 : 0, body.at10pm ? 1 : 0, phone, req.tenantId);
+  sendJson(res, 200, { ok: true, phone: phone || "" });
+});
+
+router.post("/api/leads/:id/contacted", async ({ req, res, params, body }) => {
+  const lead = db.prepare("SELECT id, pipeline_stage FROM leads WHERE id = ? AND tenant_id = ?").get(params.id, req.tenantId);
+  if (!lead) return sendJson(res, 404, { error: "Lead not found" });
+  // Only toggles between New Inquiry and Contacted — never overwrites a
+  // later stage like "Appointment Booked".
+  if (!["New Inquiry", "Contacted"].includes(lead.pipeline_stage)) {
+    return sendJson(res, 200, { ok: true, pipeline_stage: lead.pipeline_stage });
+  }
+  const stage = body && body.contacted === false ? "New Inquiry" : "Contacted";
+  db.prepare("UPDATE leads SET pipeline_stage = ?, last_contact = datetime('now') WHERE id = ?").run(stage, lead.id);
+  sendJson(res, 200, { ok: true, pipeline_stage: stage });
+});
+
 router.post("/api/me/cancel-subscription", async ({ req, res }) => {
   const tenant = db
     .prepare("SELECT id, subscription_status, square_subscription_id, pending_cancel_at FROM tenants WHERE id = ?")
@@ -1109,6 +1160,81 @@ router.post("/api/onboarding/complete", async ({ req, res }) => {
 // depending on channel, and flips it to "sent" only on success —
 // a failed send is left "scheduled" so the next tick retries it.
 // ============================================================
+
+// ============================================================
+// Daily follow-up reminders (6 PM / 10 PM, studio's local time)
+// ============================================================
+function localClock(timeZone, now) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (t) => parts.find((p) => p.type === t).value;
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")) };
+}
+
+async function processReminders(now = new Date()) {
+  const tenants = db.prepare("SELECT * FROM tenants WHERE reminders_enabled = 1").all();
+  for (const t of tenants) {
+    let clock;
+    try {
+      clock = localClock(t.timezone || "America/Phoenix", now);
+    } catch (e) {
+      clock = localClock("America/Phoenix", now);
+    }
+    const slot = clock.hour === 18 && t.reminder_6pm ? "18" : clock.hour === 22 && t.reminder_10pm ? "22" : null;
+    if (!slot) continue;
+    const key = `${clock.date} ${slot}`;
+    if (t.reminder_last_sent === key) continue;
+    // Claim this slot first so a slow or failed send never double-sends.
+    db.prepare("UPDATE tenants SET reminder_last_sent = ? WHERE id = ?").run(key, t.id);
+
+    const leads = db
+      .prepare("SELECT name, phone, email, dance_interest FROM leads WHERE tenant_id = ? AND pipeline_stage = 'New Inquiry' ORDER BY id DESC")
+      .all(t.id);
+    if (leads.length === 0) continue;
+
+    const n = leads.length;
+    const word = n === 1 ? "lead" : "leads";
+    const dash = "https://danceleadmachine.com/admin.html";
+    const brief = leads.slice(0, 3)
+      .map((l) => `${l.name || "Someone"} (${[l.dance_interest, l.phone].filter(Boolean).join(", ")})`)
+      .join("; ");
+    const more = n > 3 ? ` +${n - 3} more` : "";
+    const smsBody = `DLM reminder: ${n} new ${word} waiting for follow-up — ${brief}${more}. Open: ${dash}`;
+
+    if (t.reminder_phone && smsEnabledFor(t.id)) {
+      try {
+        await sendSms({ to: t.reminder_phone, body: smsBody, from: t.sms_from_number || undefined });
+      } catch (e) {
+        console.warn(`Reminder SMS failed for tenant ${t.id}:`, e.message);
+      }
+    }
+    if (t.admin_user && t.admin_user.includes("@")) {
+      const lines = leads.map((l) => `• ${l.name || "Someone"} — ${l.dance_interest || "inquiry"}${l.phone ? " — " + l.phone : ""}${l.email ? " — " + l.email : ""}`);
+      const emailBody = [
+        `You have ${n} new ${word} who haven't been contacted yet:`,
+        "",
+        ...lines,
+        "",
+        `Open your dashboard to text, call or email them: ${dash}`,
+        "",
+        `Tip: tap "Mark Contacted" on a lead once you've reached out, and it won't appear in future reminders.`,
+        `You can turn these reminders off anytime in the Settings tab.`,
+      ].join("\n");
+      try {
+        await sendEmail({
+          to: t.admin_user,
+          subject: `Reminder: ${n} new ${word} waiting for follow-up`,
+          body: emailBody,
+          fromName: "Dance Lead Machine",
+        });
+      } catch (e) {
+        console.warn(`Reminder email failed for tenant ${t.id}:`, e.message);
+      }
+    }
+  }
+}
+
 async function processDueSends() {
   const today = new Date().toISOString().slice(0, 10);
   const dueSteps = db
@@ -1385,8 +1511,9 @@ if (require.main === module) {
     setTimeout(() => processDueSends().catch((e) => console.warn("processDueSends error:", e.message)), 15000);
     setInterval(() => {
       processDueSends().catch((e) => console.warn("processDueSends error:", e.message));
+      processReminders().catch((e) => console.warn("processReminders error:", e.message));
     }, 5 * 60 * 1000);
   });
 }
 
-module.exports = { server, db };
+module.exports = { server, db, processReminders };
