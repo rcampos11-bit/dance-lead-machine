@@ -199,6 +199,14 @@ addTenantCol("timezone", "timezone TEXT NOT NULL DEFAULT 'America/Phoenix'");
 addTenantCol("reminder_last_sent", "reminder_last_sent TEXT");
 // First name used for the dashboard's "Good morning, ___" briefing.
 addTenantCol("owner_first_name", "owner_first_name TEXT");
+
+// Scoreboard + weekly report: track when a lead books and for how much,
+// and whether/when the Monday report email went out.
+addTenantCol("weekly_report_enabled", "weekly_report_enabled INTEGER NOT NULL DEFAULT 1");
+addTenantCol("weekly_report_last_sent", "weekly_report_last_sent TEXT");
+const leadCols2 = db.prepare("PRAGMA table_info(leads)").all();
+if (!leadCols2.some((c) => c.name === "booked_at")) db.exec("ALTER TABLE leads ADD COLUMN booked_at TEXT");
+if (!leadCols2.some((c) => c.name === "booked_amount")) db.exec("ALTER TABLE leads ADD COLUMN booked_amount REAL");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
