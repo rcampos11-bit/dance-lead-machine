@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dance Lead Machine™ — Live AI Receptionist</title>
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/styles.css?v=2">
 </head>
 <body>
 <div class="app">
@@ -28,6 +28,15 @@
   </div>
 
   <div id="view-receptionist">
+  <div class="card score-card" id="scoreCard">
+    <h3 id="scoreTitle">📈 Your Scoreboard</h3>
+    <div class="score-tiles">
+      <div class="score-tile"><div class="score-num" id="scoreLeads">0</div><div class="score-label">New leads</div></div>
+      <div class="score-tile"><div class="score-num" id="scoreBooked">0</div><div class="score-label">Booked</div></div>
+      <div class="score-tile money"><div class="score-num" id="scoreMoney">$0</div><div class="score-label">Money booked</div></div>
+    </div>
+    <p class="score-note" id="scoreNote"></p>
+  </div>
   <div class="card briefing-card" id="briefingCard">
     <div class="briefing-head">
       <h2 id="briefingGreeting">Hello! 👋</h2>
@@ -218,6 +227,12 @@
           </div>
         </div>
         <div class="card">
+          <h3>Weekly Report</h3>
+          <p class="hint">Every Monday at 8 AM, get an email with last week's new leads, bookings and money booked.</p>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="weeklyEnabled"><span class="slider"></span></span> <b>Weekly report</b> <span id="weeklyState" class="rem-state">Off</span></label>
+          <p class="hint" id="weeklyNote"></p>
+        </div>
+        <div class="card">
           <h3>Your Subscription</h3>
           <p class="hint">Your current plan status, straight from Square.</p>
           <div id="billingStatus" class="billing-status">Loading…</div>
@@ -264,6 +279,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=5"></script>
+<script src="/app.js?v=6"></script>
 </body>
 </html>
