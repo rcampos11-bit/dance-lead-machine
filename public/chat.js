@@ -34,7 +34,12 @@ function addLeadCard(lead) {
   const el = document.getElementById("messages");
   const div = document.createElement("div");
   div.className = "lead-card";
-  const nextStepLine = `<tr><td class="k">Next Step</td><td>${escapeHtml(lead.assignedInstructor)} will reach out to schedule with you.</td></tr>`;
+  const nextStepLine = lead.bookingUrl
+    ? `<tr><td class="k">Next Step</td><td>Pick a time below, or ${escapeHtml(lead.assignedInstructor)} will reach out to schedule with you.</td></tr>`
+    : `<tr><td class="k">Next Step</td><td>${escapeHtml(lead.assignedInstructor)} will reach out to schedule with you.</td></tr>`;
+  const bookBtn = lead.bookingUrl
+    ? `<a class="book-btn" href="${escapeHtml(lead.bookingUrl)}" target="_blank" rel="noopener">📅 Pick a time for your first lesson</a>`
+    : "";
   const prefLine = lead.timePreference
     ? `<tr><td class="k">Best Time</td><td>${escapeHtml(lead.timePreference.charAt(0).toUpperCase() + lead.timePreference.slice(1))}</td></tr>`
     : "";
@@ -44,7 +49,8 @@ function addLeadCard(lead) {
       <tr><td class="k">Interest</td><td>${escapeHtml(lead.danceInterest)}</td></tr>
       ${nextStepLine}
       ${prefLine}
-    </table>`;
+    </table>
+    ${bookBtn}`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
