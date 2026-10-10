@@ -659,7 +659,7 @@ function renderPricingCard(cat) {
     <div class="ic-specialty">${escapeHtml(cat.product)}</div>
     <div class="ic-stats">
       <div class="stat"><div class="num">$${Number(cat.revenue || 0).toLocaleString()}</div><div class="lbl">Revenue</div></div>
-      <div class="stat"><div class="num">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
+      <div class="stat"><div class="num" style="font-size:13px;word-break:break-all;">${escapeHtml(cat.key)}</div><div class="lbl">Key</div></div>
     </div>
         <div class="ic-actions">
       <button data-action="edit" data-id="${cat.id}">Edit</button>
