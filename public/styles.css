@@ -611,3 +611,7 @@
   .booked-btn{font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid #c9a227;background:#fff;color:#8a6d00;cursor:pointer;margin:8px 0 0;font-family:inherit;}
   .contacted-btn + .booked-btn{margin-left:6px;}
   .booked-btn.done{background:#c9a227;color:#fff;}
+
+  /* Booking link button (chat + dashboard) */
+  .book-btn{display:block;margin-top:10px;padding:11px 14px;border-radius:10px;background:#2e9d5b;color:#fff !important;text-align:center;font-weight:bold;font-size:14px;text-decoration:none;}
+  .book-btn:hover{background:#25834b;}
