@@ -197,6 +197,8 @@ addTenantCol("reminder_10pm", "reminder_10pm INTEGER NOT NULL DEFAULT 1");
 addTenantCol("reminder_phone", "reminder_phone TEXT");
 addTenantCol("timezone", "timezone TEXT NOT NULL DEFAULT 'America/Phoenix'");
 addTenantCol("reminder_last_sent", "reminder_last_sent TEXT");
+// First name used for the dashboard's "Good morning, ___" briefing.
+addTenantCol("owner_first_name", "owner_first_name TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
