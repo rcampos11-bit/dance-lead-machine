@@ -24,7 +24,7 @@
     <button class="tab-btn" id="tabBtnFollowup">🔁 Automated Follow-Up <span class="count-pill" id="fuCount">0</span></button>
     <button class="tab-btn" id="tabBtnTeam">🏢 Studio Team <span class="count-pill" id="teamCount">0</span></button>
         <button class="tab-btn" id="tabBtnPricing">💰 Pricing <span class="count-pill" id="pricingCount">0</span></button>
-    <button class="tab-btn" id="tabBtnBilling">⚙️ Billing</button>
+    <button class="tab-btn" id="tabBtnBilling">⚙️ Settings</button>
   </div>
 
   <div id="view-receptionist">
@@ -188,6 +188,20 @@
     <div class="team-layout">
       <div class="side">
         <div class="card">
+          <h3>Follow-Up Reminders</h3>
+          <p class="hint">Get a text and an email when new leads haven't been contacted yet. Tap "Mark Contacted" on a lead once you've reached out and it drops off the reminders. No new leads means no reminder.</p>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="remEnabled"><span class="slider"></span></span> <b>Reminders</b> <span id="remState" class="rem-state">Off</span></label>
+          <div class="rem-times">
+            <label><input type="checkbox" id="rem6"> 6:00 PM</label>
+            <label><input type="checkbox" id="rem10"> 10:00 PM</label>
+          </div>
+          <div class="add-instructor-form">
+            <input type="text" id="remPhone" inputmode="tel" placeholder="Text reminders to, e.g. (480) 555-1234">
+            <p class="hint" id="remNote"></p>
+            <button id="remSaveBtn">Save Reminder Settings</button>
+          </div>
+        </div>
+        <div class="card">
           <h3>Your Subscription</h3>
           <p class="hint">Your current plan status, straight from Square.</p>
           <div id="billingStatus" class="billing-status">Loading…</div>
@@ -234,6 +248,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>
