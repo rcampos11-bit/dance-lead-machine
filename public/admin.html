@@ -28,6 +28,14 @@
   </div>
 
   <div id="view-receptionist">
+  <div class="card briefing-card" id="briefingCard">
+    <div class="briefing-head">
+      <h2 id="briefingGreeting">Hello! 👋</h2>
+      <span id="briefingCount" class="count-pill">0</span>
+    </div>
+    <p class="briefing-sub" id="briefingSub">Loading today's priorities…</p>
+    <ol class="briefing-list" id="briefingList"></ol>
+  </div>
   <div class="layout">
     <div class="card chat-card">
       <div class="chat-header">
@@ -188,6 +196,14 @@
     <div class="team-layout">
       <div class="side">
         <div class="card">
+          <h3>Your Profile</h3>
+          <p class="hint">Used for your daily greeting at the top of the dashboard.</p>
+          <div class="add-instructor-form">
+            <input type="text" id="profileFirstName" placeholder="Your first name, e.g. Robert" maxlength="40">
+            <button id="profileSaveBtn">Save Name</button>
+          </div>
+        </div>
+        <div class="card">
           <h3>Follow-Up Reminders</h3>
           <p class="hint">Get a text and an email when new leads haven't been contacted yet. Tap "Mark Contacted" on a lead once you've reached out and it drops off the reminders. No new leads means no reminder.</p>
           <label class="switch-row"><span class="switch"><input type="checkbox" id="remEnabled"><span class="slider"></span></span> <b>Reminders</b> <span id="remState" class="rem-state">Off</span></label>
@@ -248,6 +264,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=4"></script>
+<script src="/app.js?v=5"></script>
 </body>
 </html>
