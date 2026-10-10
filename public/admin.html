@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dance Lead Machine™ — Live AI Receptionist</title>
-<link rel="stylesheet" href="/styles.css?v=2">
+<link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
 <div class="app">
@@ -227,6 +227,15 @@
           </div>
         </div>
         <div class="card">
+          <h3>Booking Link</h3>
+          <p class="hint">Paste the link to your online booking page (Setmore, Square Appointments, Calendly...). When a student finishes chatting, they get a big "Pick a time" button, and the link is added to your follow-up emails. Leave it blank to turn this off.</p>
+          <div class="add-instructor-form">
+            <input type="text" id="bookingUrl" inputmode="url" placeholder="e.g. yourstudio.setmore.com" maxlength="300">
+            <button id="bookingSaveBtn">Save Booking Link</button>
+            <a id="bookingTest" href="#" target="_blank" rel="noopener" class="hint" style="display:none;">Test your link ↗</a>
+          </div>
+        </div>
+        <div class="card">
           <h3>Weekly Report</h3>
           <p class="hint">Every Monday at 8 AM, get an email with last week's new leads, bookings and money booked.</p>
           <label class="switch-row"><span class="switch"><input type="checkbox" id="weeklyEnabled"><span class="slider"></span></span> <b>Weekly report</b> <span id="weeklyState" class="rem-state">Off</span></label>
@@ -279,6 +288,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=6"></script>
+<script src="/app.js?v=7"></script>
 </body>
 </html>
