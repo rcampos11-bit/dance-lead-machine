@@ -207,6 +207,11 @@ addTenantCol("weekly_report_last_sent", "weekly_report_last_sent TEXT");
 const leadCols2 = db.prepare("PRAGMA table_info(leads)").all();
 if (!leadCols2.some((c) => c.name === "booked_at")) db.exec("ALTER TABLE leads ADD COLUMN booked_at TEXT");
 if (!leadCols2.some((c) => c.name === "booked_amount")) db.exec("ALTER TABLE leads ADD COLUMN booked_amount REAL");
+
+// Booking link: the instructor's own scheduling page (Setmore, Square,
+// Calendly...). Shown to students when the chat wraps up and added to
+// follow-up emails, so a new student can grab a time on their own.
+addTenantCol("booking_url", "booking_url TEXT");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
