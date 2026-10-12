@@ -358,7 +358,7 @@ async function refreshLeads() {
   allLeads.forEach((lead) => {
   const row = document.createElement("div");
   row.className = "lead-row";
-  const tagColor = lead.pipeline_stage === "Appointment Booked" ? "var(--hot)" : "var(--warm)";
+  const tagColor = lead.pipeline_stage === "Appointment Booked" ? "#2e9d5b" : "var(--warm)";
   const stageLine = lead.appointment_label
     ? `📅 ${escapeHtml(lead.appointment_label)} · ${escapeHtml(lead.assigned_instructor || "")}`
     : `⏳ ${escapeHtml(lead.pipeline_stage)} · ${escapeHtml(lead.assigned_instructor || "")}`;
