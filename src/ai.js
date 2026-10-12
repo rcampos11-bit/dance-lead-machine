@@ -22,7 +22,7 @@ function buildCaptureLeadTool(categories) {
   return {
     name: "capture_lead",
     description:
-      "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone and/or email), which category their inquiry falls into, and their response to the appointment time options (a slot number, or that none worked for them). Always also say a short, warm closing line in the same reply.",
+      "Call this exactly once, when you have enough information to hand the lead off to the studio: their name, their best contact info (phone and/or email), which category their inquiry falls into, and (only if you were told to ask) their time-of-day preference. Always also say a short, warm closing line in the same reply.",
     input_schema: {
       type: "object",
       properties: {
@@ -49,7 +49,17 @@ function buildCaptureLeadTool(categories) {
   };
 }
 
-function buildSystemPrompt({ studioName, categories }) {
+// Wrap-up steps. When the studio has saved an online booking link, the
+// student books their own time from a button shown after the chat, so the
+// AI skips the "mornings/afternoons/evenings?" question and saves the lead
+// as soon as it has a name + contact info (no lead lost if they leave).
+const CALLBACK_STEPS = `4. Once you have their name and contact info, ask whether mornings, afternoons, or evenings tend to work best for a quick call — do not offer or mention any specific times, dates, or slots. This is just a general preference so a real person can follow up.
+5. As soon as you have ALL of: their category, name, contact info, AND their time-of-day preference (or that they don't have one), call the capture_lead tool with everything you've learned, and say a short warm closing line in the same reply — something like "a real person will call you shortly to find a time that works." Never mention or imply a specific date, time, or booked appointment.`;
+const CALLBACK_RULES = `Never call capture_lead before you have all four pieces of information. Never ask about things you already know. Never state or imply a specific date or time — only ask for a general morning/afternoon/evening preference, and let a human confirm the actual time afterward. Never ask about or reference texting, SMS, or messaging consent in any form — that is handled entirely outside this conversation.`;
+const BOOKING_STEPS = `4. As soon as you have their category, name, and contact info, call the capture_lead tool right away with everything you've learned (set time_preference to null unless they already mentioned one). Do NOT ask about mornings, afternoons, or evenings. In the same reply, say a short warm closing line like "You're all set! Tap the button below to pick a time for your first lesson, or we'll reach out soon."`;
+const BOOKING_RULES = `Never call capture_lead before you have their category, name, and contact info. Never ask about things you already know. Never state or imply a specific date or time, and never say a lesson is booked; the student picks their own time from the button after this chat. Never ask about or reference texting, SMS, or messaging consent in any form; that is handled entirely outside this conversation.`;
+
+function buildSystemPrompt({ studioName, categories, hasBookingLink }) {
   const categoryList = categories
     .map((c) => `- ${c.key}: ${c.label}${c.product ? ` (what we offer: ${c.product})` : ""}`)
     .join("\n");
@@ -62,10 +72,9 @@ ${categoryList}
    New students come first: if they say they're a beginner, brand new, have never danced, or want a first lesson, pick the category meant for new students or beginners (for example one that mentions beginner, new dancer, intro, or first lesson), even if they also mention private lessons. Only pick a multi-lesson package when they ask for that package by name or say they already have dance experience.
 2. Ask exactly one smart, natural follow-up question relevant to their category (e.g. wedding date for a wedding inquiry, child's age for a kids inquiry, experience level for competitive). Don't ask more than one question per reply.
 3. Collect their name and contact info. Ask for phone and email, and accept whichever they give — one or both. If they only give one, that's fine, don't push for the other. Never ask permission to text them, never mention SMS, and never say anything like "can we text you" — that is handled separately, after this conversation, by a dedicated consent step. Just collect the phone number itself if they give one.
-4. Once you have their name and contact info, ask whether mornings, afternoons, or evenings tend to work best for a quick call — do not offer or mention any specific times, dates, or slots. This is just a general preference so a real person can follow up.
-5. As soon as you have ALL of: their category, name, contact info, AND their time-of-day preference (or that they don't have one), call the capture_lead tool with everything you've learned, and say a short warm closing line in the same reply — something like "a real person will call you shortly to find a time that works." Never mention or imply a specific date, time, or booked appointment.
+${hasBookingLink ? BOOKING_STEPS : CALLBACK_STEPS}
 
-Never call capture_lead before you have all four pieces of information. Never ask about things you already know. Never state or imply a specific date or time — only ask for a general morning/afternoon/evening preference, and let a human confirm the actual time afterward. Never ask about or reference texting, SMS, or messaging consent in any form — that is handled entirely outside this conversation. Stay natural and conversational throughout — you're a friendly human-sounding receptionist, not a form.`;
+${hasBookingLink ? BOOKING_RULES : CALLBACK_RULES} Stay natural and conversational throughout — you're a friendly human-sounding receptionist, not a form.`;
 }
 
 /**
@@ -79,7 +88,7 @@ Never call capture_lead before you have all four pieces of information. Never as
  * @param {function} [opts.fetchImpl] - injectable for tests
  * @returns {Promise<{reply: string, toolCall: object|null, rawAssistantContent: array}>}
  */
-async function getReceptionistReply({ apiKey, studioName, categories, slots, history, userMessage, fetchImpl }) {
+async function getReceptionistReply({ apiKey, studioName, categories, slots, history, userMessage, fetchImpl, hasBookingLink }) {
   const doFetch = fetchImpl || fetch;
   if (!apiKey) {
     throw new Error("Missing ANTHROPIC_API_KEY. Set it as an environment variable before starting the server.");
@@ -97,7 +106,7 @@ async function getReceptionistReply({ apiKey, studioName, categories, slots, his
     body: JSON.stringify({
       model: DEFAULT_MODEL,
       max_tokens: 500,
-      system: buildSystemPrompt({ studioName, categories }),
+      system: buildSystemPrompt({ studioName, categories, hasBookingLink: !!hasBookingLink }),
       tools: [buildCaptureLeadTool(categories)],
       messages,
     }),
