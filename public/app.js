@@ -125,7 +125,31 @@ async function sendConsent(agreed) {
 // another business's name.
 let myStudioName = "our studio";
 
+
+// ---- Gentle "still there?" nudge ----
+// If the receptionist asked a question and the student hasn't replied in
+// 90 seconds (and isn't typing), say one friendly line. Once per chat.
+let nudgeTimer = null;
+let nudged = false;
+function clearNudge() {
+  if (nudgeTimer) clearTimeout(nudgeTimer);
+  nudgeTimer = null;
+}
+function scheduleNudge(reply) {
+  clearNudge();
+  if (nudged || lastDone || !String(reply || "").includes("?")) return;
+  nudgeTimer = setTimeout(() => {
+    nudgeTimer = null;
+    if (nudged || lastDone || document.getElementById("input").value.trim()) return;
+    nudged = true;
+    botSay("Still there? 😊 No rush. Just reply whenever you're ready.");
+  }, 90000);
+}
+document.getElementById("input").addEventListener("input", clearNudge);
+
 function newConversation() {
+  clearNudge();
+  nudged = false;
   sessionId = null;
   lastDone = false;
   document.getElementById("messages").innerHTML = "";
@@ -133,6 +157,7 @@ function newConversation() {
 }
 
 async function sendMessage(text) {
+  clearNudge();
   userSay(text);
   const sendBtn = document.getElementById("sendBtn");
   sendBtn.disabled = true;
@@ -150,6 +175,7 @@ async function sendMessage(text) {
     sessionId = data.sessionId;
     lastDone = !!data.done;
     botSay(data.reply);
+    if (!data.awaitingConsent && !data.done) scheduleNudge(data.reply);
     if (data.awaitingConsent) {
       addConsentCard(data.awaitingConsent);
     } else if (data.done && data.lead) {
