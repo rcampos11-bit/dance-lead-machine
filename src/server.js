@@ -240,6 +240,7 @@ router.post("/api/chat", async ({ req, res, body }) => {
       slots: state.slots,
       history: toAnthropicHistory(messages),
       userMessage,
+      hasBookingLink: !!bookingUrlFor(tenantId),
     });
   } catch (err) {
     return sendJson(res, 502, { error: err.message, sessionId });
@@ -286,6 +287,8 @@ const load = getLoadByInstructor(tenantId);
     let notes = tc.notes || "";
     notes += timePreference
       ? ` | Prefers ${timePreference} for a callback.`
+      : bookingUrlFor(tenantId)
+      ? ` | Shown the booking link to pick their own time.`
       : ` | No time-of-day preference given — needs a personal follow-up to schedule.`;
 
     const pending = { name: tc.name, email, phone, cat, instructor, notes, timePreference };
