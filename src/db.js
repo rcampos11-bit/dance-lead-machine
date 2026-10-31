@@ -212,6 +212,11 @@ if (!leadCols2.some((c) => c.name === "booked_amount")) db.exec("ALTER TABLE lea
 // Calendly...). Shown to students when the chat wraps up and added to
 // follow-up emails, so a new student can grab a time on their own.
 addTenantCol("booking_url", "booking_url TEXT");
+
+// Instant alerts: text the owner the moment a lead comes in or texts back,
+// and play a chime on the open dashboard. Both on by default.
+addTenantCol("instant_alerts", "instant_alerts INTEGER NOT NULL DEFAULT 1");
+addTenantCol("dashboard_chime", "dashboard_chime INTEGER NOT NULL DEFAULT 1");
   // Ensure a default tenant (id 1) exists — this is "your" studio account,
   // and is where all pre-multi-tenancy data lives after migration above.
     const tenantCount = db.prepare("SELECT COUNT(*) AS n FROM tenants").get().n;
