@@ -213,6 +213,15 @@
           </div>
         </div>
         <div class="card">
+          <h3>Instant Lead Alerts</h3>
+          <p class="hint">Know the second a new student reaches out, so you can reply while they're still excited.</p>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="alertSms"><span class="slider"></span></span> <b>Text me instantly</b> <span id="alertSmsState" class="rem-state">Off</span></label>
+          <p class="hint" style="margin-top:-6px;">A text (plus an email) the moment a lead comes in, and whenever a lead texts you back.</p>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="alertChime"><span class="slider"></span></span> <b>Chime on this dashboard</b> <span id="alertChimeState" class="rem-state">Off</span></label>
+          <p class="hint" id="alertNote"></p>
+          <button id="alertTestBtn" class="ghost-btn" type="button">🔔 Play test chime</button>
+        </div>
+        <div class="card">
           <h3>Follow-Up Reminders</h3>
           <p class="hint">Get a text and an email when new leads haven't been contacted yet. Tap "Mark Contacted" on a lead once you've reached out and it drops off the reminders. No new leads means no reminder.</p>
           <label class="switch-row"><span class="switch"><input type="checkbox" id="remEnabled"><span class="slider"></span></span> <b>Reminders</b> <span id="remState" class="rem-state">Off</span></label>
@@ -288,6 +297,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js?v=9"></script>
+<script src="/app.js?v=10"></script>
 </body>
 </html>
