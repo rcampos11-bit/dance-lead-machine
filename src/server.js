@@ -441,7 +441,7 @@ function finalizeLead(tenantId, sessionId, pending, smsConsent) {
     insertStep.run(seqInfo.lastInsertRowid, s.dateStr, s.sortKey, s.channel, s.body, s.status);
   }
 
-  return {
+  const summary = {
     id: leadId,
     name,
     email,
@@ -455,6 +455,8 @@ function finalizeLead(tenantId, sessionId, pending, smsConsent) {
     smsConsent,
     bookingUrl,
   };
+  notifyOwnerNewLead(tenantId, summary).catch((e) => console.warn("New-lead alert failed:", e.message));
+  return summary;
 }
 function templateKeyLabel(key) {
   const { SEQUENCE_TEMPLATES } = require("./logic");
@@ -1202,6 +1204,96 @@ router.post("/api/me/weekly-report", async ({ req, res, body }) => {
 });
 
 // ============================================================
+// Instant alerts — text (and email) the owner the moment a lead
+// comes in or texts back, so nobody waits until the 10 PM reminder.
+// ============================================================
+function prettyPhone(raw) {
+  const d = String(raw || "").replace(/\D/g, "").slice(-10);
+  return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : String(raw || "");
+}
+// SMS-safe text: plain characters only, so each alert stays one cheap segment.
+function smsSafe(s) {
+  return String(s || "")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[^\x20-\x7E\n]/g, "")
+    .trim();
+}
+function alertTargetsFor(tenantId) {
+  const t = db.prepare("SELECT id, admin_user, reminder_phone, sms_from_number, instant_alerts FROM tenants WHERE id = ?").get(tenantId);
+  if (!t || !t.instant_alerts) return null;
+  return {
+    phone: t.reminder_phone && smsEnabledFor(t.id) ? t.reminder_phone : null,
+    from: t.sms_from_number || undefined,
+    email: t.admin_user && t.admin_user.includes("@") ? t.admin_user : null,
+  };
+}
+
+async function notifyOwnerNewLead(tenantId, lead) {
+  const to = alertTargetsFor(tenantId);
+  if (!to) return;
+  const money = Number(lead.potentialRevenue) > 0 ? ` ($${Number(lead.potentialRevenue).toLocaleString()})` : "";
+  const contact = [lead.phone ? prettyPhone(lead.phone) : null, lead.email || null].filter(Boolean).join(" / ");
+  if (to.phone) {
+    const sms = smsSafe(`DLM: New lead! ${lead.name || "Someone"} - ${lead.danceInterest || "new inquiry"}${money}. Reach out now: ${contact || "see dashboard"}`);
+    try {
+      await sendSms({ to: to.phone, body: sms.slice(0, 300), from: to.from });
+    } catch (e) {
+      console.warn(`New-lead alert SMS failed for tenant ${tenantId}:`, e.message);
+    }
+  }
+  if (to.email) {
+    await sendEmail({
+      to: to.email,
+      subject: `New lead: ${lead.name || "Someone"} - ${lead.danceInterest || "new inquiry"}`,
+      body: [
+        `${lead.name || "Someone"} just finished chatting with your AI receptionist.`,
+        "",
+        `Interested in: ${lead.danceInterest || "-"}${money}`,
+        lead.phone ? `Phone: ${prettyPhone(lead.phone)}` : null,
+        lead.email ? `Email: ${lead.email}` : null,
+        "",
+        "Leads who hear back within the hour are far more likely to book. Reach out now:",
+        "https://danceleadmachine.com/admin.html",
+      ].filter((x) => x !== null).join("\n"),
+      fromName: "Dance Lead Machine",
+    });
+  }
+}
+
+router.get("/api/me/alerts", async ({ req, res }) => {
+  const t = db.prepare("SELECT instant_alerts, dashboard_chime, reminder_phone FROM tenants WHERE id = ?").get(req.tenantId);
+  sendJson(res, 200, {
+    instantAlerts: !!t.instant_alerts,
+    dashboardChime: !!t.dashboard_chime,
+    phone: t.reminder_phone && smsEnabledFor(req.tenantId) ? prettyPhone(t.reminder_phone) : "",
+  });
+});
+
+router.post("/api/me/alerts", async ({ req, res, body }) => {
+  body = body || {};
+  db.prepare("UPDATE tenants SET instant_alerts = ?, dashboard_chime = ? WHERE id = ?").run(
+    body.instantAlerts ? 1 : 0,
+    body.dashboardChime ? 1 : 0,
+    req.tenantId
+  );
+  sendJson(res, 200, { ok: true });
+});
+
+// Tiny, cheap check the dashboard polls to know when to chime.
+router.get("/api/me/lead-pulse", async ({ req, res }) => {
+  const r = db.prepare("SELECT id, name, dance_interest FROM leads WHERE tenant_id = ? ORDER BY id DESC LIMIT 1").get(req.tenantId);
+  const t = db.prepare("SELECT dashboard_chime FROM tenants WHERE id = ?").get(req.tenantId);
+  sendJson(res, 200, {
+    latestId: r ? r.id : 0,
+    name: r ? r.name || "" : "",
+    interest: r ? r.dance_interest || "" : "",
+    chime: !!(t && t.dashboard_chime),
+  });
+});
+
+// ============================================================
 // Booking link — students pick their own lesson time
 // ============================================================
 function bookingUrlFor(tenantId) {
@@ -1704,7 +1796,7 @@ async function handleTwilioInboundSms(req, res) {
 
     // Which studio does this number belong to? A studio's own number
     // first, otherwise the shared number belongs to tenant 1.
-    const tenants = db.prepare("SELECT id, name, admin_user, sms_from_number FROM tenants").all();
+    const tenants = db.prepare("SELECT id, name, admin_user, sms_from_number, reminder_phone FROM tenants").all();
     let tenant = tenants.find((t) => t.sms_from_number && lastTenDigits(t.sms_from_number) === lastTenDigits(to));
     if (!tenant) tenant = tenants.find((t) => t.id === 1);
 
@@ -1714,7 +1806,22 @@ async function handleTwilioInboundSms(req, res) {
       .all(tenant ? tenant.id : 1);
     const lead = leads.find((l) => lastTenDigits(l.phone) === fromDigits);
 
-    const ownerEmail = tenant && tenant.admin_user && tenant.admin_user.includes("@") ? tenant.admin_user : null;
+    // A text from the owner's own alert phone (e.g. replying to an alert)
+    // is not a student reply, so it must never be forwarded back.
+    const fromOwner = tenant && tenant.reminder_phone && lastTenDigits(tenant.reminder_phone) === fromDigits;
+
+    const alertTo = tenant && !fromOwner ? alertTargetsFor(tenant.id) : null;
+    if (alertTo && alertTo.phone && body) {
+      const quoted = body.length > 160 ? body.slice(0, 157) + "..." : body;
+      const sms = smsSafe(`DLM: ${lead ? lead.name : prettyPhone(from)} texted back: "${quoted}" Text them from your phone at ${prettyPhone(from)}`);
+      try {
+        await sendSms({ to: alertTo.phone, body: sms.slice(0, 320), from: alertTo.from });
+      } catch (e) {
+        console.warn("Reply alert SMS failed:", e.message);
+      }
+    }
+
+    const ownerEmail = !fromOwner && tenant && tenant.admin_user && tenant.admin_user.includes("@") ? tenant.admin_user : null;
     if (ownerEmail && body) {
       const who = lead ? `${lead.name} (${from})` : from;
       const lines = [
