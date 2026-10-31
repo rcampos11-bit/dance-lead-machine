@@ -964,7 +964,7 @@ function switchTab(which) {
   document.getElementById("tabBtnTeam").classList.toggle("active", which === "team");
   document.getElementById("tabBtnPricing").classList.toggle("active", which === "pricing");
   document.getElementById("tabBtnBilling").classList.toggle("active", which === "billing");
-  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); loadWeeklySetting(); loadBookingLink(); }
+  if (which === "billing") { loadBillingStatus(); loadReminderSettings(); loadProfile(); loadWeeklySetting(); loadBookingLink(); loadAlertSettings(); }
 }
 document.getElementById("tabBtnReceptionist").addEventListener("click", () => switchTab("receptionist"));
 document.getElementById("tabBtnFollowup").addEventListener("click", () => switchTab("followup"));
@@ -1187,6 +1187,119 @@ document.getElementById("remSaveBtn").addEventListener("click", async () => {
   }
   btn.disabled = false;
 });
+
+// ============================================================
+// Instant alerts — dashboard chime when a new lead arrives
+// ============================================================
+let audioCtx = null;
+function getAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch {}
+  return audioCtx;
+}
+// Browsers only allow sound after the page has been clicked or tapped once.
+["click", "keydown", "touchstart"].forEach((ev) => document.addEventListener(ev, getAudio, { once: true }));
+
+function playChime() {
+  const ctx = getAudio();
+  if (!ctx) return;
+  // Three rising, bell-like notes, loud enough to hear across the room.
+  [880, 1175, 1568].forEach((freq, i) => {
+    const t = ctx.currentTime + i * 0.18;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.95);
+  });
+}
+
+let lastLeadId = null;
+let titleFlash = null;
+const baseTitle = document.title;
+function flashTitle(text) {
+  clearInterval(titleFlash);
+  let on = false;
+  titleFlash = setInterval(() => {
+    on = !on;
+    document.title = on ? text : baseTitle;
+  }, 1000);
+}
+function stopFlash() {
+  clearInterval(titleFlash);
+  titleFlash = null;
+  document.title = baseTitle;
+}
+window.addEventListener("focus", stopFlash);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) stopFlash(); });
+
+async function checkLeadPulse() {
+  try {
+    const res = await fetch("/api/me/lead-pulse");
+    if (!res.ok) return;
+    const p = await res.json();
+    if (lastLeadId === null) {
+      lastLeadId = p.latestId;
+      return;
+    }
+    if (p.latestId > lastLeadId) {
+      lastLeadId = p.latestId;
+      if (p.chime) playChime();
+      showToast(`🔔 New lead: ${p.name || "someone"}${p.interest ? " – " + p.interest : ""}`);
+      if (document.hidden || !document.hasFocus()) flashTitle("🔔 New lead!");
+      refreshLeads();
+    } else {
+      lastLeadId = p.latestId;
+    }
+  } catch {}
+}
+setInterval(checkLeadPulse, 30000);
+checkLeadPulse();
+
+// ---- Settings: instant alert switches ----
+function updateAlertStates() {
+  document.getElementById("alertSmsState").textContent = document.getElementById("alertSms").checked ? "On" : "Off";
+  document.getElementById("alertChimeState").textContent = document.getElementById("alertChime").checked ? "On" : "Off";
+}
+async function loadAlertSettings() {
+  try {
+    const res = await fetch("/api/me/alerts");
+    if (!res.ok) return;
+    const a = await res.json();
+    document.getElementById("alertSms").checked = a.instantAlerts;
+    document.getElementById("alertChime").checked = a.dashboardChime;
+    document.getElementById("alertNote").textContent = a.phone
+      ? `Texts go to ${a.phone} (the number in Follow-Up Reminders below).`
+      : "Add your cell number in Follow-Up Reminders below to get texts. Until then, alerts come by email.";
+    updateAlertStates();
+  } catch {}
+}
+async function saveAlertSettings() {
+  updateAlertStates();
+  try {
+    const res = await fetch("/api/me/alerts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        instantAlerts: document.getElementById("alertSms").checked,
+        dashboardChime: document.getElementById("alertChime").checked,
+      }),
+    });
+    showToast(res.ok ? "Alert settings saved." : "Couldn't save alert settings.");
+  } catch {
+    showToast("Couldn't save alert settings.");
+  }
+}
+document.getElementById("alertSms").addEventListener("change", saveAlertSettings);
+document.getElementById("alertChime").addEventListener("change", saveAlertSettings);
+document.getElementById("alertTestBtn").addEventListener("click", playChime);
 
 // ---- Settings: booking link (Setmore, Square, Calendly...) ----
 function showBookingTest(url) {
